@@ -23,7 +23,7 @@
 
 <!-- form starts here -->
 
-<form id="alignmentform" method="post" action="{% url 'create_alignment' %}">{% csrf_token %}
+<form id="alignmentform" method="post" action="{% url 'create_alignment' %}">{%csrf_token %}
 
     <div class="partitionbox" id="partitionbox">
         <div class="leftpbox" id="leftpbox">
@@ -93,16 +93,114 @@
 </div>
     <hr style="clear:both; visibility: hidden;">
 
-
     <div class="inputbox" id="inputbox">
 
 <div class="toolbox" id="toolbox">
+    <div class="settingsbox" id="settingsbox"><span class="flip" style="user-select: none; font-size:200%" onmouseover="style='user-select: none; font-size:200%; cursor:pointer'" onmouseout="style='user-select: none; font-size:200%; cursor:default'" onclick="showsettings()">⚙
+    </span></div>
     
     <!-- Create the text container to hold text information panels 
     <div class="dictbox" id="dictbox"><span class="flip" style="user-select: none; font-size:200%" onmouseover="style='user-select: none; font-size:200%; cursor:pointer'" onmouseout="style='user-select: none; font-size:200%; cursor:default'" onclick="showdict()">📖
     </span></div>
     -->
 
+    <div id="settingspanel">
+        text1<br>
+        fg<input id="fg1" name="fg1" type="color" size="6"><br>
+        bg<input id="bg1" name="bg1" type="color" size="6"><br>
+
+        text2<br>
+        fg<input id="fg2" name="fg2" type="color" size="6"><br>
+        bg<input id="bg2" name="bg2" type="color" size="6"><br>
+
+        text3<br>
+        fg<input id="fg3" name="fg3" type="color" size="6"><br>
+        bg<input id="bg3" name="bg3" type="color" size="6"><br>
+
+        text4<br>
+        fg<input id="fg4" name="fg4" type="color" size="6"><br>
+        bg<input id="bg4" name="bg4" type="color" size="6"><br>
+
+        main<br>
+        fg<input id="fgmain" name="fgmain" type="color" size="6"><br>
+        bg<input id="bgmain" name="bgmain" type="color" size="6"><br>
+
+        align. list<br>
+        fg<input id="fglist" name="fglist" type="color" size="6"><br>
+        bg<input id="bglist" name="bglist" type="color" size="6"><br>
+
+        alignment<br>
+        fg<input id="fgalignment" name="fgalignment" type="color" size="6"><br>
+        bg<input id="bgalignment" name="bgalignment" type="color" size="6"><br>
+
+        other1<br>
+        fg<input id="other1fg" name="other1fg" type="color" size="6"><br>
+        bg<input id="other1bg" name="other1bg" type="color" size="6"><br>
+
+        other2<br>
+        fg<input id="other2fg" name="other2fg" type="color" size="6"><br>
+        bg<input id="other2bg" name="other2bg" type="color" size="6"><br>
+
+        <h4 id="liveh1a">Tibetan: @##/_/rgya gar skad du/</h4><br>
+        <h4 id="liveh1b">Chinese: 恒河上優婆夷會第三十一</h4><br>
+            <select id="selecth1FontFamily" name="selectFontFamily" onchange="updateh1family();">
+                <option> Serif </option>
+                <option> Arial </option>
+                <option> Sans-Serif </option>                                  
+                <option> Tahoma </option>
+                <option> Georgia </option>
+                <option> Verdana </option>
+                <option> Lucida Sans Unicode </option>
+            </select>
+            <script>
+              function updateh1family() {
+                var selector = document.getElementById('selecth1FontFamily');
+                var family = selector.options[selector.selectedIndex].value;
+                var h1a = document.getElementById('liveh1a')
+                var h1b = document.getElementById('liveh1b')
+                h1a.style.fontFamily = family;
+                h1b.style.fontFamily = family;        
+              }
+            </script>
+
+        <button id="submit_colors" type="button" onclick="setcolors(fg1, bg1, fg2, bg2, fg2, bg2, fg3, bg3, fg4, bg4, fgmain, bgmain, fglist, bglist, fgalignment, bgalignment, selecth1FontFamily);">Revise settings</button>
+
+            <script>
+            // default color settings
+            fg1.value = "#000000"
+            bg1.value = "#FFFFFF"
+
+            fg2.value = "#000000"
+            bg2.value = "#FFFFFF"
+
+            fg3.value = "#000000"
+            bg3.value = "#FFFFFF"
+
+            fg4.value = "#000000"
+            bg4.value = "#FFFFFF"
+
+            fgmain.value = "#000000"
+            bgmain.value = "#FFFFFF"
+
+            fglist.value = "#000000"
+            bglist.value = "#FFFFFF"
+
+            fgalignment.value = "#000000"
+            bgalignment.value = "#FFFFFF"
+
+            selecth1FontFamily.value = "Georgia"
+
+            </script>
+    </div>
+
+        <div id="dictpanel">
+            <select>
+                <option>Y 1996</option>
+                <option>MVP</option>
+                <option>DDB</option>
+            </select>
+            <button type="submit">Search</button>
+        </div>
 
     </div>
 
@@ -119,7 +217,7 @@
                 <option id="a{{ witness.id }}" value="{{ witness.id }}">{{ witness.name }}</option>
                 {% endif %}
             {% endfor %}
-            </select>(<input readonly id="from1" name="from1" size="4">–<input readonly id="to1" name="to1" size="4">)<button id="clear1" type="button">clear1</button><br>
+            </select><input hidden id="from1" name="from1" size="6"><input hidden id="to1" name="to1" size="6"><button hidden id="clear1" type="button">clear1</button><br>
 
             <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
             Witness
@@ -132,148 +230,18 @@
                 <option id="b{{ witness.id }}" value="{{ witness.id }}">{{ witness.name }}</option>
                 {% endif %}
             {% endfor %}
-            </select>(<input readonly id="from2" name="from2" size="4">–<input readonly id="to2" name="to2" size="4">)<button id="clear2" type="button">clear2</button><br>
+            </select><input hidden id="from2" name="from2" size="6"><input hidden id="to2" name="to2" size="6"><button hidden id="clear2" type="button">clear2</button><br>
 
-            Provisional subsegment §
-            <input type="text" id="provisionaldigit" name="provisionaldigit" value="" size="3" onkeypress="return isNumber(event)">.
-            <input type="text" id="provisionalletter" name="provisionalletter" value="" size="3" onkeypress="return isLetter(event)"><br>
-
-            Score
-            <select id="score" name="score">
-                <option value="-1">N/A</option>  
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-            </select><br>
-
-
-            <input hidden id="user" name="user" value="optools">
-
+        <input hidden id="score" name="score" value="-1">
+        <input hidden id="user" name="user" value="optools">
         <input hidden id="reallypost" name="reallypost">
         <input hidden id="clickstatus" name="clickstatus">
 
         <button hidden type="submit">Submit</button>
-        <button id="submit_it" type="button">Submit</button>
+        <button id="submit_it" type="button">Take Me Back!</button>
         </form>
     </div>
 
-<div class="list" id="list">
-  <h4 align="center">Alignments</h4>
-    {% for a in latest_alignments_list %}
-      {% if most_recent_witness1.id ==  a.witness_src_id and most_recent_witness2.id == a.witness_dst_id and a.char_start_src < last_char1 and a.char_end_src > first_char1 and a.char_start_dst < last_char2 and a.char_end_dst > first_char2 or a.char_end_src == None or a.char_end_dst == None %}
-
-      {% if a.char_start_src != None and a.char_start_dst != None %}
-        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone({{ a.char_start_src }}, {{ a.char_end_src }}, {{ a.char_start_dst }}, {{ a.char_end_dst }});">
-      {% elif a.char_start_src == None and a.char_start_dst != None %}
-        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone(0, 0, {{ a.char_start_dst }}, {{ a.char_end_dst }});"> 
-      {% elif a.char_start_src != None and a.char_start_dst == None %}
-        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone({{ a.char_start_src }}, {{ a.char_end_src }}, 0, 0);">
-      {% elif a.char_start_src == None and a.char_start_dst == None %}
-
-        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone(0, 0, 0, 0);">
-      {% endif %}
-
-
-      <div id="{{ a.id }}" class="alignment">
-        <span style="font-size: 50%">
-         witness_src_id:{{ a.witness_src_id }} witness_dst_id:{{ a.witness_dst_id }} char_start_src:{{ a.char_start_src }} char_end_src:{{ a.char_end_src }} char_start_dst:{{ a.char_start_dst }} char_end_dst:{{ a.char_end_dst}}</span> 
-        
-        <form id="revisescore" method="post" action="{% url 'update_alignment' %}">{%csrf_token %}
- 
-        <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
-
-        <input hidden id="witness1_id" name="witness1_id" type="text" value="{{ most_recent_witness1.id }}">
-        <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
-
-        <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
-        <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
-
-        <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
-        <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
-
-        <label style="font-size: 100%" for="revisedscore">id:{{ a.id }} type_id:{{ a.type_id }} score:{{ a.score }}</label>
-        <select id="revisedscore" name="revisedscore">
-          <option value="-1">N/A</option>  
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-        <button type="submit">Modify Score</button>
-        <button type="submit">Delete</button>
-        </form>
-
-        <script>
-            document.getElementById("{{ a.id }}").addEventListener("click",  function() {
-            current_alignment = {{ a.id }}  
-    //clears2(); 
-    //highlight2_reset.value = 1;
-     //document.getElementById("partition2_id").value = "{{ partition2.id }}"; reallypost.value = 0; document.getElementById("alignmentform").submit(); });
-                            }
-        </script>
-
-        <form id="dictionaries" method="post" action="{% url 'dictionaries' %}">{%csrf_token %}
- 
-        <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
-
-        <input hidden id="witness1_id" name="witness1_id" type="text" value="{{ most_recent_witness1.id }}">
-        <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
-
-        <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
-        <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
-
-        <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
-        <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
-
-        <button hidden type="submit">Dictionary Check</button>
-        </form>
-
-        </div>
-
-        </span> 
-
-
-    {% endif %}
-{% endfor %}
-</div>
-
-<!-- temporarily removed comment box
-<div class="annotationbox" id="annotationbox">
-    <div class="anns1" id="anns1">
-        <span align="center" style="font-size:70%">Annotations1</span>
-        {% for a in latest_annotations_list1 %}
-
-        {% if a.char_start < last_char1 and a.char_end > first_char1 %}
-        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightann1({{ a.char_start }}, {{ a.char_end }});">
-
-            <div class="annotation">
-                <span style="font-size:80%">{{ a.id }}</span>
-            </div>
-                </span>
-                {% endif %}
-                {% endfor %}  
-            </div>
-
-            <div class="anns2" id="anns2">
-            <span align="center" style="font-size:70%">Annotations 2</span>
-            {% for a in latest_annotations_list2 %}
-
-                {% if a.char_start < last_char2 and a.char_end > first_char2 %}
-                <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightann2({{ a.char_start }}, {{ a.char_end }});">
-                <div class="annotation">
-                <span style="font-size:80%">{{ a.id }}</span>
-                </div>
-            </span>
-            {% endif %}
-            {% endfor %}  
-            </div>
-        </div>
-temporarily remove annotations -->
-    </div>
-</div>
 
 <script>
 var partition = {{ partition_array|safe }};
@@ -317,17 +285,33 @@ lastselection2_end.value = 0
 //highlight1_reset.value = 0;
 //highlight2_reset.value = 0;
 
-blankstring = "[THIS SPACE INTENTIONALLY LEFT BLANK]"
+blankstring = "[THIS SPACE INTENTIONALLY LEFT BLANK]";
 
 //document.getElementById("text1").innerText = partition[0];
 //document.getElementById("text2").innerText = partition[1];
 //document.getElementById("text3").innerText = blankstring; 
 //document.getElementById("text4").innerText = blankstring;
 
-document.getElementById("text1").textContent = partition[0];
-document.getElementById("text2").textContent = partition[1];
-document.getElementById("text3").textContent = blankstring; 
-document.getElementById("text4").textContent = blankstring;
+//document.getElementById("text1").textContent = partition[0];
+//document.getElementById("text2").textContent = partition[1];
+
+//sub1 = "blue".substring(3);
+//sub2 = "blue".substring(3);
+
+sub1 = "A r+ya ma hA rat+na kU Ta d+ha rma";
+sub2 = "大唐三藏法師菩提流志奉　詔譯";
+
+match1 = "'ba' zhig\n'bad pa\n'bel ba'i gtam dang rnam par gtan la 'bebs pa'i sgra\nzhigs par gyur pa\nzil gyis mnan pa dang rnam par bstsal ba\n";
+match2 = "唯有\n功用\n論義決擇聲\n棄捨---狼籍 \n降伏\n";
+
+document.getElementById("text1").textContent = sub1;
+document.getElementById("text2").textContent = sub2;
+
+document.getElementById("text3").textContent = match1;
+document.getElementById("text4").textContent = match2;
+
+//document.getElementById("text3").textContent = blankstring; 
+//document.getElementById("text4").textContent = blankstring;
 
 
 scrollvalue1.value = {{ scrollvalue1 }};
@@ -1041,22 +1025,6 @@ function fromto2() {
     }
 
 
-function isNumber(evt) {
-    evt = (evt) ? evt : window.event;
-    var charCode = (evt.which) ? evt.which : evt.keyCode;
-    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
-        return false;
-    }
-    return true;
-}
-function isLetter(evt) {
-    evt = (evt) ? evt : window.event;
-    var charCode = (evt.which) ? evt.which : evt.keyCode;
-    if (charCode > 31 && (charCode < 97 || charCode > 122)) {
-        return false;
-    }
-    return true;
-}
 
     
 function scroll1() {

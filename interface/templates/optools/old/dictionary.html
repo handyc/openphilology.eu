@@ -4,6 +4,10 @@
 <!-- Open Philology OPTools input tool -->
 
 <div class="new" id="new">
+<div class='lefttitle'>Logged in as: {{ user.first_name }} {{ user.last_name }} ({{ user.get_username }})</div>
+    
+
+
     <div class='lefttitle'>Witness 1: {{ most_recent_witness1.name }}</div>
     <div class='righttitle'>Witness 2: {{ most_recent_witness2.name }}</div>
 <hr style="clear:both;">
@@ -12,7 +16,21 @@
 
 <div class='textcontainer' id="textcontainer">
 <div class='textupper' id="textupper">
-    <div class="text1" id="text1" name="text1" onMouseUp="select1()" onscroll = "scroll1()"></div>
+
+<!-- form starts here -->
+
+<form id="alignmentform" method="post" action="{% url 'create_alignment' %}">{% csrf_token %}
+
+    <div id="dictpanel">
+            <select>
+                <option>Y 1996</option>
+                <option>MVP</option>
+                <option>DDB</option>
+            </select>
+            <button type="submit">Search</button>
+        </div>
+
+    <div class="text1" style="width: 31%;" id="text1" name="text1" onMouseUp="select1()" onscroll = "scroll1()"></div>
 
     <div class='gutter' id='gutter1'></div>
 
@@ -21,9 +39,7 @@
 
 <hr style="clear:both; visibility: hidden;">
 
-<!-- form starts here -->
 
-<form id="alignmentform" method="post" action="{% url 'create_alignment' %}">{% csrf_token %}
 
     <div class="partitionbox" id="partitionbox">
         <div class="leftpbox" id="leftpbox">
@@ -98,11 +114,14 @@
 
 <div class="toolbox" id="toolbox">
     
+    
     <!-- Create the text container to hold text information panels 
     <div class="dictbox" id="dictbox"><span class="flip" style="user-select: none; font-size:200%" onmouseover="style='user-select: none; font-size:200%; cursor:pointer'" onmouseout="style='user-select: none; font-size:200%; cursor:default'" onclick="showdict()">📖
     </span></div>
     -->
 
+    
+        
 
     </div>
 
@@ -215,7 +234,7 @@
                             }
         </script>
 
-        <form id="dictionaries" method="post" action="{% url 'dictionaries' %}">{%csrf_token %}
+        <form id="dictionary" method="post" action="{% url 'dictionary' %}">{%csrf_token %}
  
         <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
 
@@ -318,6 +337,8 @@ lastselection2_end.value = 0
 //highlight2_reset.value = 0;
 
 blankstring = "[THIS SPACE INTENTIONALLY LEFT BLANK]"
+
+settingsstring = "<HTML><HEAD><TITLE>f</TITLE></HEAD><BODY>settings ...</BODY></HTML>"
 
 //document.getElementById("text1").innerText = partition[0];
 //document.getElementById("text2").innerText = partition[1];
