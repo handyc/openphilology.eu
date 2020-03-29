@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+        <!-- Upload form. Note enctype attribute! -->
+        <form action="{% url 'importer' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <p>{{ form.non_field_errors }}</p>
+
+            <p>{{ form.witness_src.label_tag }} {{ form.witness_src.help_text }} {{ form.witness_src }} {{ form.witness_dst.label_tag }} {{ form.witness_dst.help_text }} {{ form.witness_dst }}</p>
+
+            <p>{{ form.csvfile.label_tag }} {{ form.csvfile }}
+                {{ form.csvfile.errors }}
+            <input type="submit" value="Upload"/></p>
+        </form>
+        <form action="/optools"><input type="submit" value="Main" /></form>
+        {% if matches %}
+
+        <table style="width:100%">
+            <tr>
+                <td style="border: 1px solid black;">w1 match pos</td>
+                <td style="border: 1px solid black;">w1 length</td>
+                <td style="border: 1px solid black;">w1 target</td>
+                <td style="border: 1px solid black;">w1 found</td>
+                <td style="border: 1px solid black;"></td>
+                <td style="border: 1px solid black;">w2 match pos</td>
+                <td style="border: 1px solid black;">w2 length</td>
+                <td style="border: 1px solid black;">w2 target</td>
+                <td style="border: 1px solid black;">w2 found</td>
+            </tr>
+
+            {% for w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound in matches %}
+            <tr>
+                <td style="border: 1px solid black;">{{ w1match }}</td>
+                <td style="border: 1px solid black;">{{ w1matchlength }}</td>
+                <td style="border: 1px solid black;">{{ w1matchtarget }}</td>
+                <td style="border: 1px solid black;">{{ w1matchfound }}</td>
+                <td style="border: 1px solid black;">
+
+                <form id="addme" style="display:inline;" method="post" action="{% url 'add_alignment' %}">{%csrf_token %}
+
+                <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
+
+                <input hidden id="witness1_id" name="witness1_id" type="text" value="{{ most_recent_witness1.id }}">
+                <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
+
+                <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
+                <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
+
+                <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
+                <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
+                <input hidden id="scrollvalue_alignments" name="scrollvalue_alignments" value="{{ scrollvalue_alignments }}" size="4">
+
+                <button type="submit"><--add--></button>
+                </form></td>
+
+                <td style="border: 1px solid black;">{{ w2match }}</td>
+                <td style="border: 1px solid black;">{{ w2matchlength }}</td>
+                <td style="border: 1px solid black;">{{ w2matchtarget }}</td>
+                <td style="border: 1px solid black;">{{ w2matchfound }}</td>
+            </tr>
+
+            {% endfor %}
+        </table>
+        {% else %}
+            <p>Matches will display after file is uploaded.</p>
+            <p>csv format: lang1, lang2, score, label, note.</p>
+            <p>example: "@##/_/rgya gar skad du/_A r+ya ma hA rat+na kU Ta d+ha rma par+yA ya sha ta sA ha sri ka gran the tri sam+ba ra ni ra de sha pa ri brta nan nAm ma hA ya na sU tra/", "大唐三藏法師菩提流志奉　詔譯如是我聞：一時", 3, 11.c, "just a test"</p>
+        {% endif %}
+
+        <!-- List of uploaded documents
+        {% if documents and witnesses %}
+        Imported files:
+            <ul>
+                {% for document in documents %}
+                    <li><a href="{{ document.csvfile.url }}">{{ document.csvfile.name }}</a>
+                    {{ document.witness_src.name }} <-> {{ document.witness_dst.name }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No documents.</p>
+        {% endif %}
+
+        {% if alignments %}
+            <ul>
+                {% for alignment in alignments %}
+                    <li><a href="{{ alignment.csvfile.url }}">{{ document.csvfile.name }}</a>
+                    {{ alignment.witness_src.name }} <-> {{ alignment.witness_dst.name }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>Alignments will display after file is uploaded.</p>
+        {% endif %}
+
+        {% if w1partitions %}
+            {% for partition in w1partitions %}
+                {{ partition.content }}        
+
+            {% endfor %}
+        {% endif %}
+
+        {% if w2partitions %}
+            {% for partition in w2partitions %}
+                {{ partition.content }}        
+        
+            {% endfor %}
+        {% endif %}
+        List of uploaded documents -->
+
+
+{% endblock %}

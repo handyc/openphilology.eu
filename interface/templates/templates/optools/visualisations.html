@@ -1,0 +1,1201 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Open Philology OPTools input tool -->
+
+<!-- open div 'new' -->
+<div class="new" style="color: {{ usersettings.mainfg }}; background: {{ usersettings.mainbg }}; font-family: {{ usersettings.fontfamily }}" id="new">
+    <div class='lefttitle'>Witness 1: {{ most_recent_witness1.name }}</div>
+    <div class='righttitle'>Witness 2: {{ most_recent_witness2.name }}</div>
+<hr style="clear:both;">
+
+<!-- Create the text container to hold text information panels -->
+<div class='textcontainer' style="color: {{ usersettings.mainfg }}; background: {{ usersettings.mainbg }};" id="textcontainer">
+    <div class='textupper' style="color: {{ usersettings.mainfg }}; background: {{ usersettings.mainbg }};" id="textupper">
+        <div class="text1" style="color: {{ usersettings.text1fg }}; background: {{ usersettings.text1bg }};" id="text1" name="text1" onMouseUp="select1()" onscroll = "scroll1()"></div>
+
+        <div class='gutter' id='gutter1'></div>
+
+        <div class="text2" style="color: {{ usersettings.text2fg }}; background: {{ usersettings.text2bg }};" id="text2" name="text2" onMouseUp="select2()" onscroll = "scroll2()"></div>
+    </div>
+    <!-- close 'textupper' -->
+
+    <hr style="clear:both; visibility: hidden;">
+
+    <!-- form starts here -->
+
+    <form id="alignmentform" method="post" action="{% url 'visualisations' %}">{% csrf_token %}
+
+
+    <!-- 'partitionbox' starts here -->
+    <div class="partitionbox" style="color: {{ usersettings.mainfg }}; background: {{ usersettings.mainbg }};" id="partitionbox">
+
+        <div class="leftpbox" id="leftpbox">
+
+            <button id="w1left" type="button">←</button>
+            start
+            <select>
+            <span class="left">
+                {% for partition in latest_partition_list1 %}
+                    {% if partition.id == most_recent_partition1 %}
+                        <option selected id="a{{ partition.id }}" value="{{ partition.id }}">{{ partition.char_start }}</option>
+                    {% else %}
+                        <option id="a{{ partition.id }}" value="{{ partition.id }}">{{ partition.char_start }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+
+            <input hidden id="start_char1" name="start_char1"> – end <input id="end_char1" name="end_char1" size="6">
+
+            <button id="w1right" type="button">→</button>
+            </span>
+
+            <span class="right">Scroll:
+                <input id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
+            </span>
+        </div>
+
+        <div class="rightpbox" id="rightpbox">
+
+            <span class="left">
+            <button id="w2left" type="button">←</button>
+            start 
+            <select>
+            {% for partition2 in latest_partition_list2 %}
+                {% if partition2.id == most_recent_partition2 %}
+                    <option selected id="b{{ partition2.id }}" value="{{ partition2.id }}">{{ partition2.char_start }}</option>
+                {% else %}
+                <option id="b{{ partition2.id }}" value="{{ partition2.id }}">{{ partition2.char_start }}</option>
+                {% endif %}
+            {% endfor %}
+            </select>
+
+            <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
+            <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
+
+            <input hidden id="lastselection1_start" name="lastselection1_start">
+            <input hidden id="lastselection1_end" name="lastselection1_end">
+            <input hidden id="lastselection2_start" name="lastselection2_start">
+            <input hidden id="lastselection2_end" name="lastselection2_end">
+
+            <input hidden id="start_char2" name="start_char2"> – end <input id="end_char2" name="end_char2" size="6">
+
+            <button id="w2right" type="button">→</button>
+            </span>
+
+            <span class="right">Scroll:
+            <input id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4"></span>
+        </div>
+    </div>
+    <!-- 'partitionbox' ends here -->
+
+    <!-- bottom text windows 'textlower' -->
+    <div class='textlower' style="color: {{ usersettings.mainfg }}; background: {{ usersettings.mainbg }};" id="textlower">
+        <div class="text3" style="color: {{ usersettings.text3fg }}; background: {{ usersettings.text3bg }};" id="text3" name="text3"></div>
+        <div class="gutter" id="gutter2"></div>
+        <div class="text4" style="color: {{ usersettings.text4fg }}; background: {{ usersettings.text4bg }};" id="text4" name="text4"></div>
+    </div>
+    <!-- close 'textlower' -->
+
+</div>
+<!-- close 'textcontainer' -->
+
+    <hr style="clear:both; visibility: hidden;">
+
+<!-- 'inputbox' -->
+<div class="inputbox" id="inputbox">
+
+    <!-- 'buttonbox' -->
+    <div class="buttonbox" id="buttonbox">
+        <input hidden id="witness1_id" name="witness1_id" type="text" value="{{ most_recent_witness1.id }}">
+            Witness
+
+        <select>
+            {% for witness in latest_witness_list %}
+                {% if witness.id == most_recent_witness1.id %}
+                <option selected id="a{{ witness.id }}" value="{{ witness.id }}">{{ witness.name }}</option>
+                {% else %}
+                <option id="a{{ witness.id }}" value="{{ witness.id }}">{{ witness.name }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>(<input readonly id="from1" name="from1" size="4">–<input readonly id="to1" name="to1" size="4">)<button id="clear1" type="button">clear1</button><br>
+
+        <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
+            Witness
+
+        <select>
+            {% for witness in latest_witness_list %}
+                {% if witness.id == most_recent_witness2.id %}
+                <option selected id="b{{ witness.id }}" value="{{ witness.id }}">{{ witness.name }}</option>
+                {% else %}
+                <option id="b{{ witness.id }}" value="{{ witness.id }}">{{ witness.name }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>(<input readonly id="from2" name="from2" size="4">–<input readonly id="to2" name="to2" size="4">)<button id="clear2" type="button">clear2</button><br>
+
+        Provisional Subsegment §
+        <input type="text" id="provisionaldigit" name="provisionaldigit" value="" size="3" onkeypress="return isNumber(event)">.
+        <input type="text" id="provisionalletter" name="provisionalletter" value="" size="3" onkeypress="return isLetter(event)"><br>
+
+        Score
+        <select id="score" name="score">
+            <option value="-1">N/A</option>  
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+        </select><br>
+
+        <input hidden id="user" name="user" value="optools">
+
+        <input hidden id="reallypost" name="reallypost">
+        <input hidden id="clickstatus" name="clickstatus">
+
+        <button hidden type="submit">Submit</button>
+        <button id="submit_it" type="button">Submit</button>
+        </form>
+
+    <!-- 'link to user settings page' -->
+    <form action="/optools/settings"><input type="submit" value="☸" /></form>
+
+    </div>
+    <!-- close 'buttonbox' -->
+
+    <!-- 'listbox' -->
+    <div class="list" style="color: {{ usersettings.alignmentslistfg }}; background: {{ usersettings.alignmentslistbg }};" id="list">
+        <h4 align="center">Alignments</h4>
+            {% for a in latest_alignments_list %}
+                {% if most_recent_witness1.id ==  a.witness_src_id and most_recent_witness2.id == a.witness_dst_id and a.char_start_src < last_char1 and a.char_end_src > first_char1 and a.char_start_dst < last_char2 and a.char_end_dst > first_char2 or a.char_end_src == None or a.char_end_dst == None %}
+
+                    {% if a.char_start_src != None and a.char_start_dst != None %}
+                        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone({{ a.char_start_src }}, {{ a.char_end_src }}, {{ a.char_start_dst }}, {{ a.char_end_dst }});">
+                    {% elif a.char_start_src == None and a.char_start_dst != None %}
+
+        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone(0, 0, {{ a.char_start_dst }}, {{ a.char_end_dst }});">
+
+                {% elif a.char_start_src != None and a.char_start_dst == None %}
+                <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone({{ a.char_start_src }}, {{ a.char_end_src }}, 0, 0);">
+
+                {% elif a.char_start_src == None and a.char_start_dst == None %}
+                    <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightone(0, 0, 0, 0);">
+            {% endif %}
+
+      <div id="{{ a.id }}" class="alignment" style="color: {{ usersettings.alignmentsfg }}; background: {{ usersettings.alignmentsbg }};">
+
+
+        <!-- tiny text removed handyc 27 feb 2020 
+        <span style="font-size: 50%">
+         witness_src_id:{{ a.witness_src_id }} witness_dst_id:{{ a.witness_dst_id }} char_start_src:{{ a.char_start_src }} char_end_src:{{ a.char_end_src }} char_start_dst:{{ a.char_start_dst }} char_end_dst:{{ a.char_end_dst}}</span> 
+        -->
+        
+        <form id="revisescore" method="post" action="{% url 'update_alignment' %}">{%csrf_token %}
+ 
+        <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
+
+        <input hidden id="witness1_id" name="witness1_id" type="text" value="{{ most_recent_witness1.id }}">
+        <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
+
+        <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
+        <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
+
+        <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
+        <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
+
+        <label style="font-size: 100%" for="revisedscore"> ({{ forloop.counter }}) Witness 1: {{ most_recent_witness1.name }} <-> Witness 2: {{ most_recent_witness2.name }} Subsegment: §{{ a.tentative_name }} Score:{{ a.score }}</label>
+        <select id="revisedscore" name="revisedscore">
+          <option value="-1">N/A</option>  
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <button type="submit">Modify Score</button>
+        </form>
+
+        <form id="deleteme" style="display:inline;" method="post" action="{% url 'delete_alignment' %}">{%csrf_token %}
+
+        <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
+
+        <input hidden id="witness1_id" name="witness1_id" type="text" value="{{ most_recent_witness1.id }}">
+        <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
+
+        <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
+        <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
+
+        <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
+        <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
+
+
+        <button type="submit">Delete</button>
+        </form>
+
+        <script>
+            document.getElementById("{{ a.id }}").addEventListener("click",  function() {
+            current_alignment = {{ a.id }}  
+    //clears2(); 
+    //highlight2_reset.value = 1;
+     //document.getElementById("partition2_id").value = "{{ partition2.id }}"; reallypost.value = 0; document.getElementById("alignmentform").submit(); });
+                            }
+        </script>
+
+        <form id="dictionary" method="post" action="{% url 'dictionary' %}">{%csrf_token %}
+ 
+        <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
+
+        <input hidden id="witness1_id" name="witness1_id" type="text" value="{{ most_recent_witness1.id }}">
+        <input hidden id="witness2_id" name="witness2_id" type="text" value="{{ most_recent_witness2.id }}">
+
+        <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
+        <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
+
+                <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
+                <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
+
+                <button hidden type="submit">Dictionary Check</button>
+                </form>
+
+                </div>
+
+                </span> 
+
+
+            {% endif %}
+        {% endfor %}
+        </div>
+        <!-- close ??? -->
+
+    </div>
+    <!-- close 'inputbox' -->
+</div>
+<!-- close 'new' -->
+
+
+<!-- temporarily removed comment box
+<div class="annotationbox" id="annotationbox">
+    <div class="anns1" id="anns1">
+        <span align="center" style="font-size:70%">Annotations1</span>
+        {% for a in latest_annotations_list1 %}
+
+        {% if a.char_start < last_char1 and a.char_end > first_char1 %}
+        <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightann1({{ a.char_start }}, {{ a.char_end }});">
+
+            <div class="annotation">
+                <span style="font-size:80%">{{ a.id }}</span>
+            </div>
+                </span>
+                {% endif %}
+                {% endfor %}  
+            </div>
+
+            <div class="anns2" id="anns2">
+            <span align="center" style="font-size:70%">Annotations 2</span>
+            {% for a in latest_annotations_list2 %}
+
+                {% if a.char_start < last_char2 and a.char_end > first_char2 %}
+                <span class="align" onmouseover="style='cursor:pointer'" onmouseout="style='cursor:default'" onclick="highlightann2({{ a.char_start }}, {{ a.char_end }});">
+                <div class="annotation">
+                <span style="font-size:80%">{{ a.id }}</span>
+                </div>
+            </span>
+            {% endif %}
+            {% endfor %}  
+            </div>
+        </div>
+temporarily remove annotations -->
+
+
+<!-- custom JS  -->
+
+
+<script>
+var partition = {{ partition_array|safe }};
+
+start_char1.value = {{ first_char1 }};
+end_char1.value = {{ last_char1 }};
+start_char2.value = {{ first_char2 }};
+end_char2.value = {{ last_char2 }};
+
+from1.value = "";
+from2.value = "";
+to1.value = "";
+to2.value = "";
+
+clickstatus.value = "0";
+
+{% if lastselection1_start %}
+lastselection1_start.value = {{ lastselection1_start }};
+{% else %}
+lastselection1_start.value = 0
+{% endif %}
+
+{% if lastselection1_end %}
+lastselection1_end.value = {{ lastselection1_end }};
+{% else %}
+lastselection1_end.value = 0
+{% endif %}
+
+{% if lastselection2_start %}
+lastselection2_start.value = {{ lastselection2_start }};
+{% else %}
+lastselection2_start.value = 0
+{% endif %}
+
+{% if lastselection2_end %}
+lastselection2_end.value = {{ lastselection2_end }};
+{% else %}
+lastselection2_end.value = 0
+{% endif %}
+
+//highlight1_reset.value = 0;
+//highlight2_reset.value = 0;
+
+blankstring = "[THIS SPACE INTENTIONALLY LEFT BLANK]"
+
+//document.getElementById("text1").innerText = partition[0];
+//document.getElementById("text2").innerText = partition[1];
+//document.getElementById("text3").innerText = blankstring; 
+//document.getElementById("text4").innerText = blankstring;
+
+document.getElementById("text1").textContent = partition[0];
+document.getElementById("text2").textContent = partition[1];
+document.getElementById("text3").textContent = blankstring; 
+document.getElementById("text4").textContent = blankstring;
+
+
+scrollvalue1.value = {{ scrollvalue1 }};
+scrollvalue2.value = {{ scrollvalue2 }};
+
+document.getElementById("text1").scrollTo(0, scrollvalue1.value); 
+document.getElementById("text2").scrollTo(0, scrollvalue2.value); 
+
+//tk=document.getElementById("text2");
+
+//tk=document.getElementsByTagName("mark")[0];
+//tk.scrollIntoView();
+
+//var element = document.getElementById("text1").getElementsByTagName("mark")[0];
+
+//element.scrollIntoView();
+
+//$( "div.text1" ).scrollTop( 300 );
+//$( "div.text2" ).scrollTop( 300 );
+
+//    var target = $(this.getAttribute('mark'));
+//    if( target.length ) {
+//        event.preventDefault();
+//        $('html, body').stop().animate({
+//            scrollTop: target.offset().top
+//        }, 1000);
+//    }
+
+
+// using innerText will preserve HTML formatting by default,
+// but it screws up the character counts because of <br> tags
+// using innerHTML messes up the formatting, but this can be
+// corrected in CSS using white-space: pre-wrap;
+// the pre-wrap method is a little weird but ultimately seems
+// preferable, since the innerText method also does strange things
+// with the highlighting between browser and markJS
+
+// update: whitespace pre-wrap method w/ innerHTML created
+// even more problems by breaking the DOM
+// now using innerText everywhere with new functions to check for
+// BR
+
+//document.getElementById("text1").innerHTML = partition[0];
+//document.getElementById("text2").innerHTML = partition[1];
+//document.getElementById("text3").innerHTML = '[BLANK]'; 
+//document.getElementById("text4").innerHTML = '[BLANK]'; 
+
+var instance1 = { value: null };
+var instance2 = { value: null };
+
+var instancep1 = { value: null };
+var instancep2 = { value: null };
+
+rewriteprevs();
+
+const countbrmark = function (textselection) {
+  const selection = window.getSelection();
+
+    if (selection != null && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        selection.removeAllRanges();
+
+        startcount = getBRcount(textselection, range.startContainer, range.startOffset);
+        endcount = getBRcount(textselection, range.endContainer, range.endOffset);
+        
+        return {
+            start: startcount,
+            end: endcount
+        };
+    } else
+        return null;  
+}
+
+const countbr = function (textselection) {
+  const selection = window.getSelection();
+
+    if (selection != null && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        selection.removeAllRanges();
+
+        startcount = getBRcount(textselection, range.startContainer, range.startOffset);
+        endcount = getBRcount(textselection, range.endContainer, range.endOffset);
+        
+        return {
+            start: startcount,
+            end: endcount
+        };
+    } else
+        return null;  
+}
+
+const getTextSelection = function (textselection) {
+    const selection = window.getSelection();
+
+    if (selection != null && selection.rangeCount > 0) {
+
+        const range = selection.getRangeAt(0);
+
+        return {
+            start: getTextLength(textselection, range.startContainer, range.startOffset),
+            end: getTextLength(textselection, range.endContainer, range.endOffset)
+        };
+    } else
+        return null;
+}
+
+const getTextLength = function (parent, node, offset) {
+    var textLength = 0;
+
+    if (node.nodeName == '#text')
+        textLength += offset;
+    else for (var i = 0; i < offset; i++)
+        textLength += getNodeTextLength(node.childNodes[i]);
+
+    if (node != parent)
+        textLength += getTextLength(parent, node.parentNode, getNodeOffset(node));
+
+    return textLength;
+}
+
+const getBRcount = function (parent, node, offset) {
+    var brcount = 0;
+
+    if (node.nodeName == 'BR')
+        {
+        brcount = 1;
+      }
+    else if (node.nodeName == '#text')
+            { brcount = 0; }
+    else for (var i = 0; i < offset; i++)
+        brcount += getNodeBRcount(node.childNodes[i]);
+
+    if (node != parent)
+        brcount += getBRcount(parent, node.parentNode, getNodeOffset(node));
+
+    return brcount;
+}
+
+const getNodeBRcount = function (node) {
+    var brcount = 0;
+
+    if (node.nodeName == 'BR')
+        {
+        brcount = 1;
+      }
+    else if (node.nodeName == '#text') { brcount = 0; }
+    else if (node.childNodes != null)
+        for (var i = 0; i < node.childNodes.length; i++)
+            brcount += getNodeBRcount(node.childNodes[i]);
+
+    return brcount;
+}
+
+const getNodeTextLength = function (node) {
+    var textLength = 0;
+  
+    //if (node.nodeName == 'BR')
+    //    textLength = 1;
+    if (node.nodeName == 'BR')
+        {
+        //textLength = 0;
+        textLength = 1;
+        //textLength = 4;
+      }
+    else if (node.nodeName == '#text')
+        textLength = node.nodeValue.length;
+    else if (node.childNodes != null)
+        for (var i = 0; i < node.childNodes.length; i++)
+            textLength += getNodeTextLength(node.childNodes[i]);
+
+    return textLength;
+}
+
+
+const getNodeOffset = function (node) {
+    return node == null ? -1 : 1 + getNodeOffset(node.previousSibling);
+}
+
+const handleSelectionDB = function (element1, element2, from, to, instance, laststart, lastend) {
+
+// same as function below except text.slice(from.value, to.value)
+
+// where these values are actually coming from the DB
+
+// then avoid storing shifted values in DB, shift them at load time
+
+}
+
+const handleSelectionChange = function (element1, element2, from, to, instance, laststart, lastend) {
+        
+        const textSelection = getTextSelection(element1);
+
+        if (textSelection != null) {
+            //const text = element1.innerText;
+            //const text = element1.innerHTML;
+            //const text = element1.innerText;
+            const text = element1.textContent;
+            
+            const selection = text.slice(textSelection.start, textSelection.end);
+
+            const brnumber = countbr(element1);
+            
+            var brstart = brnumber.start;
+            var brend = brnumber.end;
+            
+            //print(element2, `${selection} (${textSelection.start}, ${textSelection.end})`);
+            print(element2, `${selection}`);
+            //print(element2, `${brstart} ${brend}`);
+
+
+        startoffset = textSelection.start;
+        endoffset = textSelection.end;
+        
+        var context = element1; // requires class element1 to exist
+
+        if (startoffset < endoffset)
+        {
+        from.value = startoffset; 
+        to.value = endoffset;
+        }
+        else if (startoffset > endoffset)
+        {  
+        from.value = endoffset; 
+        to.value = startoffset;  
+        }
+        else
+        {
+        from.value = ""; 
+        to.value = "";      
+        }
+
+        if (instance.value != null)
+        {
+            instance.value.unmark();
+            rewriteprevs();
+        }
+
+        if (from.value == "" || to.value == "") 
+            {
+            element2.textContent = blankstring;}
+        else{
+
+        archaic_from = from.value;
+        archaic_to = to.value;
+
+        lastselection_start = parseInt(startoffset - brstart);        
+        lastselection_end = parseInt(endoffset - brend);
+
+        from.value = lastselection_start;
+        to.value = lastselection_end;
+       
+        lastselection_length = lastselection_end - lastselection_start;
+
+        laststart.value = lastselection_start;
+        lastend.value = lastselection_end;
+
+        markstart = lastselection_start;
+        marklength = lastselection_length;
+
+        instance.value = new Mark(context);
+        instance.value.markRanges([{
+        start: markstart,
+        length: marklength,
+        }], {
+    "element": "mark",
+    "className": ""}); // marks range lastselection_start to lastselection_end
+
+        }
+
+    
+
+        } 
+        else {
+            print('Selection is null!');
+
+            //element2.innerText = blankstring;
+        }
+
+        
+
+}
+
+const print = function (element, message) {
+    if (element != null)
+        //element.innerHTML = message;
+    element.textContent = message;
+    else
+        console.log('output is null!');
+}
+
+function showmenu(){
+
+    thepanel = document.getElementById("panel");
+
+    if (thepanel.style.display != "block")
+        thepanel.style.display = "block";
+    else thepanel.style.display = "none";
+
+}
+
+function showsettings(){
+    thepanel = document.getElementById("settingspanel");
+
+    if (thepanel.style.display != "block")
+        thepanel.style.display = "block";
+    else thepanel.style.display = "none";
+}
+
+function showdict(){
+    thepanel = document.getElementById("dictpanel");
+
+    if (thepanel.style.display != "block")
+        thepanel.style.display = "block";
+    else thepanel.style.display = "none";
+}
+
+function setcolors(fg1, bg1, fg2, bg2, fg2, bg2, fg3, bg3, fg4, bg4, fgmain, bgmain, fglist, bglist, fgalignment, bgalignment, selecth1FontFamily){
+    //a = "red"
+    //window.alert("a:" + a.value);
+
+    document.getElementById("text1").style.color = fg1.value;
+    document.getElementById("text1").style.background = bg1.value;
+
+    document.getElementById("text2").style.color = fg2.value;
+    document.getElementById("text2").style.background = bg2.value;
+
+    document.getElementById("text3").style.color = fg3.value;
+    document.getElementById("text3").style.background = bg3.value;
+
+    document.getElementById("text4").style.color = fg4.value;
+    document.getElementById("text4").style.background = bg4.value;
+
+    document.getElementById("textcontainer").style.background = bgmain.value;
+    document.getElementById("textupper").style.background = bgmain.value;
+    document.getElementById("textlower").style.background = bgmain.value;
+    
+    //document.getElementById("gutter1").style.background = bgmain.value;
+    //document.getElementById("gutter2").style.background = bgmain.value;
+    
+    document.getElementById("new").style.color = fgmain.value;
+    document.getElementById("new").style.background = bgmain.value;
+
+    document.getElementById("partitionbox").style.background = bgmain.value;
+    
+    document.getElementById("list").style.color = fglist.value;
+    document.getElementById("list").style.background = bglist.value;
+
+    //document.getElementById("body").style.font-family = selecth1FontFamily;
+    document.getElementById("new").style.fontFamily = selecth1FontFamily.value;
+
+    var t1 = document.getElementById('text1')
+    t1.style.fontFamily = selecth1FontFamily.value;
+
+    // Get a NodeList of all .demo elements
+    const demoClasses = document.querySelectorAll('.alignment');
+
+    // Change the text of multiple elements with a loop
+    demoClasses.forEach(element => {
+     element.style.color = fgalignment.value;   
+     element.style.background = bgalignment.value;
+    });
+
+}
+
+function highlightann1(charstart, charend){
+
+    clearh(instance1);
+    clearh(instance2);
+
+    clearh(instancep1);
+    //clearh(instancep2);
+
+    
+    //window.alert("srcstart:" + srcstart + "srcend:" + srcend + "dststart:" + dststart + "dstend:" + dstend);
+
+    //window.alert("s:");
+    // start_char1
+
+
+        if(charend >= {{ first_char1 }} && charstart <= {{ last_char1 }}) {
+
+            if(charstart < {{ first_char1 }}) {
+                markstart = 0 }
+                else markstart = charstart - {{ first_char1 }}
+
+            if(charend > {{ last_char1 }}) {
+                marklength = {{ last_char1 }} - charstart;}
+            else {marklength = charend - charstart;}
+
+            if(marklength == 0) marklength = 1;
+
+                    instancep1.value = new Mark(".text1");
+                    instancep1.value.markRanges([{
+                    start: markstart,
+                    length: marklength,
+                    }], {
+                    "element": "mark",
+                    "className": "tertiary"});
+
+            // ~2100
+            // ~15000
+            // .13
+            // .14
+            // .145
+            //
+            // 6.8
+            // 7.14
+            //scrollvalue1.value = srcstart - 200;
+            var limit = Math.max( document.body.scrollHeight, document.body.offsetHeight, 
+                   document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );
+
+            // this number 120 should be replaced with a precise calculation
+            // based length of the text
+            divide = ({{ last_char1 }} - {{ first_char1 }})/2138;
+            //scrollvalue2.value = markstart * divide;
+            //scrollvalue1.value = markstart - 200;
+            scrollvalue1.value = (markstart / divide) + 20;
+            //scrollvalue1.value = markstart / 4.78 - 80;
+
+            document.getElementById("text1").scrollTo(0, scrollvalue1.value);
+
+        }
+        
+}
+
+function highlightann2(charstart, charend){
+
+    clearh(instance1);
+    clearh(instance2);
+
+    //clearh(instancep1);
+    clearh(instancep2);
+
+    //window.alert("srcstart:" + srcstart + "srcend:" + srcend + "dststart:" + dststart + "dstend:" + dstend);
+
+    //window.alert("s:");
+    // start_char1
+
+
+        if(charend >= {{ first_char2 }} && charstart <= {{ last_char2 }}) {
+
+            if(charstart < {{ first_char2 }}) {
+                markstart = 0 }
+                else markstart = charstart - {{ first_char2 }}
+
+            if(charend > {{ last_char2 }}) {
+                marklength = {{ last_char2 }} - charstart;}
+            else {marklength = charend - charstart;}
+
+            if(marklength == 0) marklength = 1;
+
+                    instancep2.value = new Mark(".text2");
+                    instancep2.value.markRanges([{
+                    start: markstart,
+                    length: marklength,
+                    }], {
+                    "element": "mark",
+                    "className": "tertiary"});
+            var limit = Math.max( document.body.scrollHeight, document.body.offsetHeight, 
+                   document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );
+
+            //divide = (charend - charstart)/limit);
+            divide = ({{ last_char2 }} - {{ first_char2 }})/12505;
+            //scrollvalue2.value = markstart * divide;
+            //scrollvalue1.value = markstart - 200;
+            scrollvalue2.value = (markstart / divide) + 40;
+            //scrollvalue1.value = srcstart - 200;
+            
+
+            document.getElementById("text2").scrollTo(0, scrollvalue2.value);
+
+        }
+        
+}
+
+function highlightone(srcstart, srcend, dststart, dstend){
+
+    clearh(instance1);
+    clearh(instance2);
+
+    clearh(instancep1);
+    clearh(instancep2);
+
+    
+    //window.alert("srcstart:" + srcstart + "srcend:" + srcend + "dststart:" + dststart + "dstend:" + dstend);
+
+    //window.alert("s:");
+    // start_char1
+
+
+        if(srcend >= {{ first_char1 }} && srcstart <= {{ last_char1 }}) {
+
+            if(srcstart < {{ first_char1 }}) {
+                markstart = 0 }
+                else markstart = srcstart - {{ first_char1 }}
+
+            if(srcend > {{ last_char1 }}) {
+                marklength = {{ last_char1 }} - srcstart;}
+            else {marklength = srcend - srcstart;}
+
+                    instancep1.value = new Mark(".text1");
+                    instancep1.value.markRanges([{
+                    start: markstart,
+                    length: marklength,
+                    }], {
+                    "element": "mark",
+                    "className": "tertiary"});
+
+            scrollvalue1.value = markstart / 4.78 - 80;
+            //scrollvalue1.value = srcstart - 200;
+            var limit = Math.max( document.body.scrollHeight, document.body.offsetHeight, 
+                   document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );
+
+            document.getElementById("text1").scrollTo(0, scrollvalue1.value);
+
+    }
+
+        if(dstend >= {{ first_char2 }} && dststart < {{ last_char2 }}) {
+
+
+            if(dststart < {{ first_char2 }}) {
+                markstart = 0 }
+                else markstart = dststart - {{ first_char2 }}
+
+            if(dstend > {{ last_char2 }}) {
+                marklength = {{ last_char2 }} - dststart;}
+            else {marklength = dstend - dststart;}
+
+
+
+            
+             instancep2.value = new Mark(".text2");
+                    instancep2.value.markRanges([{
+                    start: markstart,
+                    length: marklength,
+                    }], {
+                    "element": "mark",
+                    "className": "tertiary"});
+
+                    //scrollvalue2.value = dststart / 0.99 - 20;
+                    scrollvalue2.value = markstart - 20;
+                    document.getElementById("text2").scrollTo(0, scrollvalue2.value);
+        }
+        
+}
+
+function rewriteprevs(){
+{% for a in latest_alignments_list %}
+    {% if most_recent_witness1.id ==  a.witness_src_id and most_recent_witness2.id == a.witness_dst_id %}
+
+                {% if a.char_end_src >= first_char1 and a.char_start_src < last_char1 and a.type_id == 2 %}
+
+                //firstend = {{ partition.char_end }}
+                
+                // here is the problem, because we want to factor in
+                // the end of the third partition, not this partition
+
+                //markstart1 = a.char_start_src - partition.char_start;
+                
+                //const brnumber = countbrmark(element1);
+            
+                //var brstart = brnumber.start;
+                //var brend = brnumber.end;
+
+                if({{ a.char_start_src }} < {{ first_char1 }}) {
+                markstart1 = 0 }
+                else markstart1 = {{ a.char_start_src }} - {{ first_char1 }};
+
+                if({{ a.char_end_src }} > {{ last_char1 }}) {
+                marklength1 = {{ last_char1 }} - markstart1;}
+            else {marklength1 = {{ a.char_end_src }} - markstart1;}
+
+                // no, this does not factor in the second and third partitions,
+                // so retrieve an additional length object from the Django side
+                // the length must also take into account the <br> tags
+                //
+                // I did this already, the comment is outdated
+
+                instancep1.value = new Mark(".text1");
+                instancep1.value.markRanges([{
+                start: markstart1,
+                length: marklength1,
+                }], {
+                "element": "mark",
+                "className": "secondary"});
+                {% endif %}
+     
+                
+                {% if a.char_end_dst >= first_char2 and a.char_start_dst < last_char2 and a.type_id == 2 %}
+                //markstart1 = a.char_start_src - partition.char_start;
+
+                //const brnumber = countbrmark(element1);
+            
+                //var brstart = brnumber.start;
+                //var brend = brnumber.end;
+
+                  if({{ a.char_start_dst }} < {{ first_char2 }}) {
+                markstart2 = 0; }
+                else markstart2 = {{ a.char_start_dst }} - {{ first_char2 }};
+
+                if({{ a.char_end_dst }} > {{ last_char2 }}) {
+                marklength2 = {{ last_char2 }} - markstart2;}
+            else {marklength2 = {{ a.char_end_dst }} - markstart2;}
+
+
+      
+
+                instancep2.value = new Mark(".text2");
+                instancep2.value.markRanges([{
+                start: markstart2,
+                length: marklength2,
+                }], {
+                "element": "mark",
+                "className": "secondary"});
+                {% endif %}
+ 
+
+    {% endif %}
+    {% endfor %}
+}
+
+$(function() {
+        $( "#resizeDiv" ).resizable({handles: {'s': '#handle'}});
+    });
+
+function clearh(instance) {
+    if (instance.value != null) instance.value.unmark();
+    //rewriteprevs();
+    }
+
+function clearmarks() {
+    clearh(instance1);
+    clearh(instance2);
+
+    rewriteprevs();
+
+    //clearh(instancep1);
+    //clearh(instancep2);
+    }
+
+function clearfromto1() {
+    from1.value = "0";
+    to1.value = "0";
+}
+
+function clearsfromto2() {
+    from2.value = "0";
+    to2.value = "0";
+}
+
+function clears1() {
+    scrollvalue1.value = "0";
+}
+
+function clears2() {
+    scrollvalue2.value = "0";
+}
+
+submit_it.onclick = function() {
+    //scrollvalue1.value = {{ scrollvalue1 }};
+    //scrollvalue2.value = {{ scrollvalue2 }};
+
+    scrollvalue1.value = document.getElementById("text1").scrollTop;
+    scrollvalue2.value = document.getElementById("text2").scrollTop;
+
+
+    document.getElementById("alignmentform").submit(); 
+    }
+
+ function select1() {
+    text1 = document.querySelector('.text1');
+    text2 = document.querySelector('.text3');
+
+    handleSelectionChange(text1, text2, from1, to1, instance1, lastselection1_start, lastselection1_end);
+        reallypost.value = 1;    
+    }
+
+ function select2() {
+    text1 = document.querySelector('.text2');
+    text2 = document.querySelector('.text4');
+
+
+    handleSelectionChange(text1, text2, from2, to2, instance2, lastselection2_start, lastselection2_end);
+        //document.getElementById("text2.selection").style.background = "red";
+        reallypost.value = 1;
+    }
+
+function fromto1() {
+
+  //const textSelection = getTextSelection(element1);
+
+  //    from1.value = document.getElementById("text1").scrollTop;
+  //    to1.value = document.getElementById("text1").scrollTop;
+    }
+function fromto2() {
+  //    from2.value = document.getElementById("text1").scrollTop;
+  //    to2.value = document.getElementById("text1").scrollTop;
+    }
+
+
+function isNumber(evt) {
+    evt = (evt) ? evt : window.event;
+    var charCode = (evt.which) ? evt.which : evt.keyCode;
+    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+        return false;
+    }
+    return true;
+}
+function isLetter(evt) {
+    evt = (evt) ? evt : window.event;
+    var charCode = (evt.which) ? evt.which : evt.keyCode;
+    if (charCode > 31 && (charCode < 97 || charCode > 122)) {
+        return false;
+    }
+    return true;
+}
+
+    
+function scroll1() {
+      scrollvalue1.value = document.getElementById("text1").scrollTop;
+    }
+function scroll2() {
+      scrollvalue2.value = document.getElementById("text2").scrollTop;
+    }
+
+
+  clear1.onclick = function() {
+    from1.value = "";
+    to1.value = ""; 
+    document.getElementById('text3').textContent = blankstring; 
+    if(from2.value == "") reallypost.value = 0;
+    clearh(instance1);
+    //clearh(instancep1);
+    lastselection1_start.value = 0;
+    lastselection1_end.value = 0;
+  };
+
+  clear2.onclick = function() {
+    from2.value = "";
+    to2.value = ""; 
+    document.getElementById('text4').textContent = blankstring; 
+    if(from1.value == "") reallypost.value = 0;
+    clearh(instance2);
+    //clearh(instancep2);
+    lastselection2_start.value = 0;
+    lastselection2_end.value = 0;
+  };
+
+  w1left.onclick = function() {
+    clickstatus.value = "w1left";
+    //w1leftclickbutton.value = 1;
+    //highlight1_reset.value = 1;
+    reallypost.value = 0;
+    //clearmarks();
+    clearh(instance1);
+    clears1(); 
+    document.getElementById("alignmentform").submit();
+    //document.getElementById('text4').innerHTML = w1leftclickbutton.value; 
+  };
+  w1right.onclick = function() {
+    clickstatus.value = "w1right"
+    //w1rightclickbutton.value = 1;
+    //highlight1_reset.value = 1;
+    reallypost.value = 0;
+    //clearmarks();
+    clearh(instance1);
+    clears1(); 
+    document.getElementById("alignmentform").submit();
+  };
+  w2left.onclick = function() {
+    //w2leftclickbutton.value = 1;
+    clickstatus.value = "w2left";
+    //highlight2_reset.value = 1;
+    reallypost.value = 0;
+    //clearmarks();
+    clearh(instance2);
+    clears2(); 
+    document.getElementById("alignmentform").submit();
+  };
+  w2right.onclick = function() {
+    clickstatus.value = "w2right";
+    //w2rightclickbutton.value = 1;
+    //highlight2_reset.value = 1;
+    reallypost.value = 0;
+    //clearmarks();
+    clearh(instance2);
+    clears2(); 
+    document.getElementById("alignmentform").submit();
+  };
+
+  //object.addEventListener("scroll", myScript);
+
+{% for witness in latest_witness_list %}
+  document.getElementById("a{{ witness.id }}").addEventListener("click",  function() {
+    //clearmarks();
+    //clearh(instance1); 
+    clears1(); 
+
+//scrollvalue1.value = "0";
+    //highlight1_reset.value = 1; 
+    document.getElementById("witness1_id").value = "{{ witness.id }}"; document.getElementById("partition1_id").value = "";reallypost.value = 0; document.getElementById("alignmentform").submit(); });
+{% endfor %}
+
+{% for witness in latest_witness_list %}
+  document.getElementById("b{{ witness.id }}").addEventListener("click",  function() { 
+    //clearmarks(); 
+    //clearh(instance2);
+    clears2(); 
+
+//scrollvalue2.value = "0";
+//scrollvalue2.value = {{ scrollvalue2 }};
+
+    //highlight2_reset.value = 1; 
+    document.getElementById("witness2_id").value = "{{ witness.id }}"; document.getElementById("partition2_id").value = "";reallypost.value = 0; document.getElementById("alignmentform").submit(); });
+{% endfor %}
+
+{% for partition in latest_partition_list1 %}
+  document.getElementById("a{{ partition.id }}").addEventListener("click",  function() {
+    //clearmarks();
+    //clearh(instance1);
+    clears1(); 
+    //highlight1_reset.value = 1; 
+    document.getElementById("partition1_id").value = "{{ partition.id }}"; reallypost.value = 0; document.getElementById("alignmentform").submit(); });
+{% endfor %}
+
+{% for partition2 in latest_partition_list2 %}
+  document.getElementById("b{{ partition2.id }}").addEventListener("click",  function() { 
+    //clearmarks();
+    //clearh(instance2); 
+    clears2(); 
+    //highlight2_reset.value = 1;
+     document.getElementById("partition2_id").value = "{{ partition2.id }}"; reallypost.value = 0; document.getElementById("alignmentform").submit(); });
+{% endfor %}
+
+</script>
+
+{% endblock %}
