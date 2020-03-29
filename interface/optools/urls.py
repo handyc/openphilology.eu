@@ -6,21 +6,28 @@ from django.contrib import admin
 
 #from django.conf.urls.defaults import *
 
-#from models import Note
-from optools.models import Note
+#from optools.models import Note
 
 from . import views
-notes = Note.objects.all()
+#notes = Note.objects.all()
 
 urlpatterns = [
     #path('', views.index, name='index'),
     path('', views.create_alignment, name='create_alignment'),
-    #path(r'^$', 'django.views.generic.list_detail.object_list', dict(queryset=notes)),
-    #path('^$', views.note, name='note'),
-    #path('<str:slug>/', views.create_note, name='create_note'),
-    #path('<str:>/', views.sluggy, name='sluggy'),
     path('create/', views.create_alignment, name='create_alignment'),
     path('update/', views.update_alignment, name='update_alignment'),
-    path('dictchk/', views.dict_chk, name='dict_chk'),
+    path('add/', views.add_alignment, name='add_alignment'),
+    path('delete/', views.delete_alignment, name='delete_alignment'),
+    path('importer/', views.importer, name='importer'),
+    path('reader/', views.reader, name='reader'),
+    #path('alignments/', views.alignments, name='alignments'),
+    path('annotations/', views.annotations, name='annotations'),
+    path('dictionaries/', views.dictionaries, name='dictionaries'),
+    path('ngrams/', views.ngrams, name='ngrams'),
+    path('embeddings/', views.embeddings, name='embeddings'),
+    path('sts/', views.sts, name='sts'),
+    path('visualisations/', views.visualisations, name='visualisations'),
+    path('terminal/', views.terminal, name='terminal'),
+    path('settings/', views.settings, name='settings'),
 ]
 
