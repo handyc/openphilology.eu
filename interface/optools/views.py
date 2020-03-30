@@ -33,6 +33,8 @@ from editor.models import AnnotationLog
 #main_template_location = 'optools/main.html'
 
 importer_template_location = 'optools/importer.html'
+importer2_template_location = 'optools/importer2.html'
+
 reader_template_location = 'optools/reader.html'
 
 alignments_template_location = 'optools/alignments.html'
@@ -115,6 +117,232 @@ def printmatch(db, rowstr, match):
     print("   "+db[match["start"]:match["end"]])
 
 
+## this function is for testing purposes only
+## for the sake of comparison with Élie's code in 'importer'
+@login_required
+def importer2(request):
+    # Handle file upload
+    w1content = ""
+    w2content = ""
+    alignments = []
+    #diffs = []
+    #matches = []
+    matches = []
+    #w1matchlength = len(pattern)
+
+    w1partitions = []
+    w2partitions = []
+
+    if request.method == 'POST':
+        #witness_list = Witness.objects.order_by('id')
+
+        post = request.POST.copy()
+        wit1 = post['witness_src']
+        wit2 = post['witness_dst']
+
+        witness1 = Witness.objects.filter(id=wit1).order_by('id')[0]
+        witness2 = Witness.objects.filter(id=wit2).order_by('id')[0]
+
+        form = UploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            newcsv = UserFile(csvfile = request.FILES['csvfile'], witness_src = witness1, witness_dst = witness2)
+            newcsv.save()
+
+            w1partitions = WitnessPartition.objects.filter(witness_id=wit1).order_by('char_start')
+            w2partitions = WitnessPartition.objects.filter(witness_id=wit2).order_by('char_start')
+
+            w1content = ""
+            for partition in w1partitions:
+                w1content = w1content + partition.content
+
+            w2content = ""
+            for partition in w2partitions:
+                w2content = w2content + partition.content
+
+            #alignment1 = Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('id')[0]
+            alignments = Alignment.objects.filter(witness_src_id=wit1)
+            #alignments = Alignment.objects.all()
+
+            #dmp = diff_match_patch()
+
+            #DMP = dmp_module.diff_match_patch()
+
+            cfile = request.FILES['csvfile']
+
+            file_data = ""
+            for chunk in cfile.chunks():
+                file_data = file_data + str(chunk.decode("utf-8"))
+
+            io_string = io.StringIO(file_data)
+            #next(io_string)
+
+            
+            w1location = 0
+            w2location = 0
+
+            srcreader = csv.reader(io_string, delimiter=',', quotechar='"')            
+            #for column in csv.reader(io_string, delimiter=',', quotechar='"'):
+            dblang1 = w1content
+            dblang2 = w2content
+
+            lang1lastcc = 0
+            lang2lastcc = 0
+
+            #rownum = 0
+            for row in srcreader:
+                #rownum += 1
+
+                #dmp.Match_Distance = 500
+                #dmp.Match_Threshold = 0.60
+
+                #dmp.Match_Distance = 800
+                #dmp.Match_Threshold = 0.55
+                DMP.Match_Distance = 800
+                DMP.Match_Threshold = 0.55
+
+                #lines = file_data.split("\n")
+                text = w1content
+                pattern = row[0]
+                #pattern = row[0].strip()
+                #lastcc = lang1lastcc
+
+                #lengthlimit = 30
+                lengthlimit = 100
+
+
+                #handycmatch
+                #w1match = dmp.match_main(text, pattern[:lengthlimit], w1location)                
+                w1match = DMP.match_main(text, pattern[:lengthlimit], w1location)
+
+                #eliecode modified:
+                #matchlang1 = match_row(dblang1, lang1lastcc, row[0].strip())
+                #w1match = match_row(text, lastcc, pattern)
+
+                #matchlang1 = match_row(text, lang1lastcc, pattern)
+                #if matchlang1:
+                #    lang1lastcc = matchlang1["end"]
+
+                #w1match = matchlang1["start"]
+                #w1matchend = matchlang1["end"]
+
+                w1matchlength = len(pattern)
+                w1matchtarget = pattern
+
+                #if 1:
+                #    #w1match:
+                w1matchend = w1match + w1matchlength
+                w1matchfound = w1content[w1match:w1matchend]
+                #else:
+                #    w1matchend = -1
+                #    w1matchfound = -1
+
+                ########### now do match on second witness, same as above
+
+                #dmp.Match_Distance = 100
+                #dmp.Match_Threshold = 0.80
+
+                DMP.Match_Distance = 100
+                DMP.Match_Threshold = 0.80
+
+
+                #dmp.Match_Distance = 100
+                #dmp.Match_Threshold = 0.80
+
+                text = w2content
+                pattern = row[1]
+                #pattern = row[1].strip()
+                #lastcc = lang2lastcc
+
+                lengthlimit = 30
+
+                #handycmatch
+                #w2match = dmp.match_main(text, pattern[:lengthlimit], w2location)
+                w2match = DMP.match_main(text, pattern[:lengthlimit], w2location)
+                
+                #eliecode modified:
+                #w2match = match_row(text, lastcc, pattern)
+
+                #matchlang2 = match_row(text, lang2lastcc, pattern)
+
+                #if matchlang2:
+                #    lang2lastcc = matchlang2["end"]
+
+                #w2match = matchlang2["start"]
+                #w2matchend = matchlang2["end"]
+
+                w2matchlength = len(pattern)
+                w2matchtarget = pattern
+
+                w2matchend = w2match + w2matchlength
+                w2matchfound = w2content[w2match:w2matchend]
+
+                #if 1:
+                #    #w2match:
+                #w2matchend = w2match + w2matchlength
+                #w2matchfound = w2content[w2match:w2matchend]
+                #else:
+                #    w2matchend = -1
+                #    w2matchfound = -1
+
+
+                #if this exact alignment already exists in database
+                #change matchstatus from 0 to 1 and send with other data
+                #on html side, check for matchstatus to display/not display
+                #the add button
+
+                #search for this exact alignment:
+                #matchcheck = Alignment.objects.filter(char_start_src=bloop, char_end_src=bloop, char_start_dst=bloop, char_end_dst=bloop, witness_src_id=bloop, witness_dst_id=bloop).order_by('char_start')[0]
+                #matchcheck = Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('char_start')[0]
+                matchstatus = 0
+                if Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('char_start').exists():
+                    matchstatus = 1
+                """
+                if 1:
+                    #w1match:
+                    lang1lastcc = w1match["end"]
+                    #w1location = w1match + int(w1matchlength * .57)
+                if 1:
+                    #w2match:
+                    lang2lastcc = w2match["end"]
+                    #w2location = w2match + int(w2matchlength * .7)
+                """
+                matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound))
+
+                w1location = w1location + w1match + w1matchlength
+                w2location = w2location + w2match + w2matchlength
+                
+                w1location = w1match + int(w1matchlength * .57)
+                w2location = w2match + int(w2matchlength * .7)
+                
+                #w2location = w2match
+                
+
+    else:
+        form = UploadForm() # A empty, unbound form
+
+    # Load documents for the list page
+    documents = UserFile.objects.all()
+    witnesses = Witness.objects.all()
+    #alignments = Alignment.objects.all()
+
+    # Render list page with the documents and the form
+    context = {
+    'documents': documents,
+    'witnesses': witnesses,
+    'w1content': w1content,
+    'w2content': w2content,
+    'w1partitions': w1partitions,
+    'w2partitions': w2partitions,
+    'alignments': alignments,
+    'form': form,
+    'matches': matches,
+    }
+    return render(request, importer2_template_location, context)
+
+
+
+
+
 
 @login_required
 def importer(request):
@@ -191,6 +419,8 @@ def importer(request):
                 text = w1content
                 pattern = row[0].strip()
 
+                pattern = pattern.replace("_", " ")
+
                 matchlang1 = match_row(text, lang1lastcc, pattern)
                 if matchlang1:
                     lang1lastcc = matchlang1["end"]
@@ -207,7 +437,7 @@ def importer(request):
                 # now same thing on second witness
                 text = w2content
                 pattern = row[1].strip()
-                
+
                 matchlang2 = match_row(text, lang2lastcc, pattern)
                 if matchlang2:
                     lang2lastcc = matchlang2["end"]
