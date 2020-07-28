@@ -10,9 +10,30 @@ from .models import UserSettings
 from .models import UserTheme
 from .models import UserRequest
 
+from .models import CsvAlignment
+from .models import CsvAlignmentList
+
 #from editor.models import Witness
 
 ###
+
+@admin.register(CsvAlignment)
+class CsvAlignmentAdmin(admin.ModelAdmin):
+    list_display = ('csvlist', 'w1match', 'w1matchlength', 'w1matchtarget', 'w1matchfound', 'w2match', 'w2matchlength', 'w2matchtarget', 'w2matchfound')
+    list_filter = ('csvlist','w1match', 'w1matchlength', 'w1matchtarget', 'w1matchfound', 'w2match', 'w2matchlength', 'w2matchtarget', 'w2matchfound')
+    fields = ('csvlist','w1match', 'w1matchlength', 'w1matchtarget', 'w1matchfound', 'w2match', 'w2matchlength', 'w2matchtarget', 'w2matchfound')
+
+    def __str__(csvlist):
+        return self.csvlist
+
+@admin.register(CsvAlignmentList)
+class CsvAlignmentListAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    list_filter = ('name',)
+    fields = ('name',)
+
+    def __str__(name):
+        return self.name
 
 @admin.register(UserFile)
 class UserFileAdmin(admin.ModelAdmin):

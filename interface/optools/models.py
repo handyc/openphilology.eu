@@ -9,6 +9,32 @@ from editor.models import Witness
 
 ######################################################################
 
+class CsvAlignment(models.Model):
+    class Meta:
+        ordering = ('csvlist', 'w1match')
+        verbose_name_plural = "999. CSV Alignments"
+
+    csvlist = models.ForeignKey('CsvAlignmentList', on_delete=models.SET_NULL, null=True)
+
+    # information concerning Tibetan side
+    w1match = models.CharField(max_length=2000, default="0", blank=True, null=True)
+    w1matchlength = models.CharField(max_length=2000, default="0", blank=True, null=True)
+    w1matchtarget = models.CharField(max_length=2000, default="0", blank=True, null=True)
+    w1matchfound = models.CharField(max_length=2000, default="0", blank=True, null=True)
+
+    # information concerning Chinese side
+    w2match = models.CharField(max_length=2000, default="0", blank=True, null=True)
+    w2matchlength = models.CharField(max_length=2000, default="0", blank=True, null=True)
+    w2matchtarget = models.CharField(max_length=2000, default="0", blank=True, null=True)
+    w2matchfound = models.CharField(max_length=2000, default="0", blank=True, null=True)
+
+class CsvAlignmentList(models.Model):
+    class Meta:
+        ordering = ('name',)
+        verbose_name_plural = "9999. CSV Alignment Lists"
+    name = models.CharField(max_length=200, default="noname", blank=True, null=True)
+    csvfile_id = models.IntegerField(default=0, blank=True, null=True)
+
 class UserFile(models.Model):
     class Meta:
         ordering = ('csvfile',)

@@ -4,20 +4,21 @@ from django.template import loader
 from django.http import HttpResponse
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 
 from django.urls import reverse
 
-# username
-
 import json
-#from csv import reader
-import csv, io
-#import diff-match-patch
-from diff_match_patch import diff_match_patch
+import itertools
 
-#from .models import Note
+import csv, io, re
+import diff_match_patch as dmp_module
+
 from .models import UserSettings
 from .models import UserFile
+
+from .models import CsvAlignment
+from .models import CsvAlignmentList
 
 from .forms import UploadForm
 
@@ -33,7 +34,6 @@ from editor.models import AnnotationLog
 #main_template_location = 'optools/main.html'
 
 importer_template_location = 'optools/importer.html'
-importer2_template_location = 'optools/importer2.html'
 
 reader_template_location = 'optools/reader.html'
 
@@ -47,10 +47,9 @@ terminal_template_location = 'optools/terminal.html'
 visualisations_template_location = 'optools/visualisations.html'
 settings_template_location = 'optools/settings.html'
 
-DMP = diff_match_patch()
-
-#@login_required
-#def add_alignment(request):
+DMP = dmp_module.diff_match_patch()
+#DMP = diff_match_patch()
+MAX_LEN_DIFF = 10
 
 def match_row(db, lastcc, rowstr):
     res = {
@@ -59,14 +58,17 @@ def match_row(db, lastcc, rowstr):
     }
     if not rowstr:
         return res
-    res["start"] = match_right_context(db, lastcc, rowstr)
-    if res["start"] == -1:
-        return None
-    res["end"] = match_left_context(db, lastcc+len(rowstr), rowstr)
-    if res["end"] == -1:
-        return None
-    return res
-
+    simple_match_idx = db.find(rowstr, lastcc)
+    if simple_match_idx != -1:
+        return {"start": simple_match_idx, "end": simple_match_idx+len(rowstr)}
+    start = match_right_context(db, lastcc, rowstr)
+    while start != -1:
+        res["start"] = start
+        res["end"] = match_left_context(db, lastcc+len(rowstr), rowstr)
+        if res["end"] != -1 and res["end"] > res["start"]:
+            return res
+        start = match_right_context(db, lastcc, rowstr)
+    return None
 
 # This might be better off somewhere else and could be know from
 # the database
@@ -81,34 +83,48 @@ def detect_lang(s):
 
 def match_right_context(db, lastcc, rowstr):
     lang = detect_lang(rowstr)
-
     window_size = 20 if lang == "bo-x-ewts" else 5
     if window_size >= len(rowstr):
         window_size = len(rowstr)
+    #print("trying to find \""+rowstr+"\" around \""+db[lastcc:lastcc+2*window_size])
     firstrowchars = rowstr[:window_size]
     simple_match = db.find(firstrowchars, lastcc)
-    # if not too far, return:
-    if simple_match - lastcc < 10:
-        return simple_match
     return DMP.match_main(db, rowstr, lastcc)
 
 def match_left_context(db, expectedcc, rowstr):
     lang = detect_lang(rowstr)
-
     window_size = 20 if lang == "bo-x-ewts" else 5
     if window_size >= len(rowstr):
         window_size = len(rowstr)
     lastrowchars = rowstr[(len(rowstr)-window_size):]
-    simple_match = db.find(lastrowchars, expectedcc-2*window_size) # we start a bit earlier so that we can get results in more cases
-    # if not too far, return:
-    if simple_match - expectedcc < 10 and simple_match - expectedcc > -10:
-        return simple_match+window_size
-    appmatch = DMP.match_main(db, lastrowchars, expectedcc)
-    # then we have to reapply a simple match with a smaller window
-    window_size = 5 if lang == "bo-x-ewts" else 1
-    lastrowchars = rowstr[(len(rowstr)-window_size):]
+    # we start a bit earlier so that we can get results in more cases
     simple_match = db.find(lastrowchars, expectedcc-2*window_size)
-    return simple_match+window_size # approximate by nature
+    # if not too far, return:
+    if simple_match != -1 and abs(simple_match - expectedcc) < MAX_LEN_DIFF:
+        return simple_match+window_size
+    appmatch = DMP.match_main(db, lastrowchars, expectedcc-2*window_size)
+    if appmatch == -1:
+        return -1
+    # then we have to reapply a simple match with a smaller window
+    small_window_size = 5 if lang == "bo-x-ewts" else 1
+    lastrowchars = rowstr[(len(rowstr)-small_window_size):]
+    simple_match = db.find(lastrowchars, appmatch)
+    if simple_match != -1:
+        return simple_match+small_window_size
+    # more approximate:
+    return appmatch+window_size
+
+def normalize_tib(s):
+    s = re.sub(r"\[^[\]]+", "", s)
+    s = s.replace("_", " ")
+    s = s.replace("\n", "") # for csv
+    return s.strip()
+
+def normalize_zh(s):
+    s = re.sub(r"\[^[\]]+", "", s)
+    s = s.replace("\n", "") # for csv
+    s = s.replace("，", "。") # normalize punctuation
+    return s.strip()
 
 def printmatch(db, rowstr, match):
     print("   initial in csv:")
@@ -116,233 +132,33 @@ def printmatch(db, rowstr, match):
     print("   found at characters "+str(match["start"])+":"+str(match["end"]))
     print("   "+db[match["start"]:match["end"]])
 
+def grabcsv(csvlist, start, end):
+    #cfile = request.FILES['csvfile']
 
-## this function is for testing purposes only
-## for the sake of comparison with Élie's code in 'importer'
-@login_required
-def importer2(request):
-    # Handle file upload
-    w1content = ""
-    w2content = ""
-    alignments = []
-    #diffs = []
-    #matches = []
-    matches = []
-    #w1matchlength = len(pattern)
+    grabid = CsvAlignmentList.objects.filter(id=csvlist)[0].csvfile_id
+    grabcsv = UserFile.objects.filter(id=grabid)[0]
+    cfile = grabcsv.csvfile
 
-    w1partitions = []
-    w2partitions = []
+    file_data = ""
+    for chunk in cfile.chunks():
+        file_data = file_data + str(chunk.decode("utf-8"))
 
-    if request.method == 'POST':
-        #witness_list = Witness.objects.order_by('id')
+    io_string = io.StringIO(file_data)
+    #next(io_string)
 
-        post = request.POST.copy()
-        wit1 = post['witness_src']
-        wit2 = post['witness_dst']
+    w1location = 0
+    w2location = 0
 
-        witness1 = Witness.objects.filter(id=wit1).order_by('id')[0]
-        witness2 = Witness.objects.filter(id=wit2).order_by('id')[0]
+    #start=50
+    end=start+10
 
-        form = UploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            newcsv = UserFile(csvfile = request.FILES['csvfile'], witness_src = witness1, witness_dst = witness2)
-            newcsv.save()
-
-            w1partitions = WitnessPartition.objects.filter(witness_id=wit1).order_by('char_start')
-            w2partitions = WitnessPartition.objects.filter(witness_id=wit2).order_by('char_start')
-
-            w1content = ""
-            for partition in w1partitions:
-                w1content = w1content + partition.content
-
-            w2content = ""
-            for partition in w2partitions:
-                w2content = w2content + partition.content
-
-            #alignment1 = Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('id')[0]
-            alignments = Alignment.objects.filter(witness_src_id=wit1)
-            #alignments = Alignment.objects.all()
-
-            #dmp = diff_match_patch()
-
-            #DMP = dmp_module.diff_match_patch()
-
-            cfile = request.FILES['csvfile']
-
-            file_data = ""
-            for chunk in cfile.chunks():
-                file_data = file_data + str(chunk.decode("utf-8"))
-
-            io_string = io.StringIO(file_data)
-            #next(io_string)
-
-            
-            w1location = 0
-            w2location = 0
-
-            srcreader = csv.reader(io_string, delimiter=',', quotechar='"')            
-            #for column in csv.reader(io_string, delimiter=',', quotechar='"'):
-            dblang1 = w1content
-            dblang2 = w2content
-
-            lang1lastcc = 0
-            lang2lastcc = 0
-
-            #rownum = 0
-            for row in srcreader:
-                #rownum += 1
-
-                #dmp.Match_Distance = 500
-                #dmp.Match_Threshold = 0.60
-
-                #dmp.Match_Distance = 800
-                #dmp.Match_Threshold = 0.55
-                DMP.Match_Distance = 800
-                DMP.Match_Threshold = 0.55
-
-                #lines = file_data.split("\n")
-                text = w1content
-                pattern = row[0]
-                #pattern = row[0].strip()
-                #lastcc = lang1lastcc
-
-                #lengthlimit = 30
-                lengthlimit = 100
-
-
-                #handycmatch
-                #w1match = dmp.match_main(text, pattern[:lengthlimit], w1location)                
-                w1match = DMP.match_main(text, pattern[:lengthlimit], w1location)
-
-                #eliecode modified:
-                #matchlang1 = match_row(dblang1, lang1lastcc, row[0].strip())
-                #w1match = match_row(text, lastcc, pattern)
-
-                #matchlang1 = match_row(text, lang1lastcc, pattern)
-                #if matchlang1:
-                #    lang1lastcc = matchlang1["end"]
-
-                #w1match = matchlang1["start"]
-                #w1matchend = matchlang1["end"]
-
-                w1matchlength = len(pattern)
-                w1matchtarget = pattern
-
-                #if 1:
-                #    #w1match:
-                w1matchend = w1match + w1matchlength
-                w1matchfound = w1content[w1match:w1matchend]
-                #else:
-                #    w1matchend = -1
-                #    w1matchfound = -1
-
-                ########### now do match on second witness, same as above
-
-                #dmp.Match_Distance = 100
-                #dmp.Match_Threshold = 0.80
-
-                DMP.Match_Distance = 100
-                DMP.Match_Threshold = 0.80
-
-
-                #dmp.Match_Distance = 100
-                #dmp.Match_Threshold = 0.80
-
-                text = w2content
-                pattern = row[1]
-                #pattern = row[1].strip()
-                #lastcc = lang2lastcc
-
-                lengthlimit = 30
-
-                #handycmatch
-                #w2match = dmp.match_main(text, pattern[:lengthlimit], w2location)
-                w2match = DMP.match_main(text, pattern[:lengthlimit], w2location)
-                
-                #eliecode modified:
-                #w2match = match_row(text, lastcc, pattern)
-
-                #matchlang2 = match_row(text, lang2lastcc, pattern)
-
-                #if matchlang2:
-                #    lang2lastcc = matchlang2["end"]
-
-                #w2match = matchlang2["start"]
-                #w2matchend = matchlang2["end"]
-
-                w2matchlength = len(pattern)
-                w2matchtarget = pattern
-
-                w2matchend = w2match + w2matchlength
-                w2matchfound = w2content[w2match:w2matchend]
-
-                #if 1:
-                #    #w2match:
-                #w2matchend = w2match + w2matchlength
-                #w2matchfound = w2content[w2match:w2matchend]
-                #else:
-                #    w2matchend = -1
-                #    w2matchfound = -1
-
-
-                #if this exact alignment already exists in database
-                #change matchstatus from 0 to 1 and send with other data
-                #on html side, check for matchstatus to display/not display
-                #the add button
-
-                #search for this exact alignment:
-                #matchcheck = Alignment.objects.filter(char_start_src=bloop, char_end_src=bloop, char_start_dst=bloop, char_end_dst=bloop, witness_src_id=bloop, witness_dst_id=bloop).order_by('char_start')[0]
-                #matchcheck = Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('char_start')[0]
-                matchstatus = 0
-                if Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('char_start').exists():
-                    matchstatus = 1
-                """
-                if 1:
-                    #w1match:
-                    lang1lastcc = w1match["end"]
-                    #w1location = w1match + int(w1matchlength * .57)
-                if 1:
-                    #w2match:
-                    lang2lastcc = w2match["end"]
-                    #w2location = w2match + int(w2matchlength * .7)
-                """
-                matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound))
-
-                w1location = w1location + w1match + w1matchlength
-                w2location = w2location + w2match + w2matchlength
-                
-                w1location = w1match + int(w1matchlength * .57)
-                w2location = w2match + int(w2matchlength * .7)
-                
-                #w2location = w2match
-                
-
-    else:
-        form = UploadForm() # A empty, unbound form
-
-    # Load documents for the list page
-    documents = UserFile.objects.all()
-    witnesses = Witness.objects.all()
-    #alignments = Alignment.objects.all()
-
-    # Render list page with the documents and the form
-    context = {
-    'documents': documents,
-    'witnesses': witnesses,
-    'w1content': w1content,
-    'w2content': w2content,
-    'w1partitions': w1partitions,
-    'w2partitions': w2partitions,
-    'alignments': alignments,
-    'form': form,
-    'matches': matches,
-    }
-    return render(request, importer2_template_location, context)
-
-
-
-
-
+    #srcreader = csv.reader(io_string, delimiter=',', quotechar='"')
+    #i, j = 50, 60
+    #i, j = 0, 10
+    #srcreader = csv.reader(itertools.islice(io_string, start, end+1), delimiter=',', quotechar='"')
+    srcreader = csv.reader(io_string, delimiter=',', quotechar='"')
+    fool = itertools.islice(srcreader, start, end+1)
+    return fool
 
 @login_required
 def importer(request):
@@ -350,10 +166,8 @@ def importer(request):
     w1content = ""
     w2content = ""
     alignments = []
-    #diffs = []
-    #matches = []
     matches = []
-    #w1matchlength = len(pattern)
+    i, j = 0, 10
 
     w1partitions = []
     w2partitions = []
@@ -362,19 +176,26 @@ def importer(request):
         #witness_list = Witness.objects.order_by('id')
 
         post = request.POST.copy()
-        wit1 = post['witness_src']
-        wit2 = post['witness_dst']
+        witness_src = post['witness_src']
+        witness_dst = post['witness_dst']
 
-        witness1 = Witness.objects.filter(id=wit1).order_by('id')[0]
-        witness2 = Witness.objects.filter(id=wit2).order_by('id')[0]
+        witness1 = Witness.objects.filter(id=witness_src).order_by('id')[0]
+        witness2 = Witness.objects.filter(id=witness_dst).order_by('id')[0]
 
         form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
             newcsv = UserFile(csvfile = request.FILES['csvfile'], witness_src = witness1, witness_dst = witness2)
             newcsv.save()
 
-            w1partitions = WitnessPartition.objects.filter(witness_id=wit1).order_by('char_start')
-            w2partitions = WitnessPartition.objects.filter(witness_id=wit2).order_by('char_start')
+            #grabid = newcsv.id
+
+            csvlist = CsvAlignmentList(name="nothing", csvfile_id=newcsv.id)
+            csvlist.save()
+            csv_id = csvlist.id
+            #grabid = csvlist.csvfile_id
+
+            w1partitions = WitnessPartition.objects.filter(witness_id=witness_src).order_by('char_start')
+            w2partitions = WitnessPartition.objects.filter(witness_id=witness_dst).order_by('char_start')
 
             w1content = ""
             for partition in w1partitions:
@@ -384,15 +205,12 @@ def importer(request):
             for partition in w2partitions:
                 w2content = w2content + partition.content
 
-            #alignment1 = Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('id')[0]
-            alignments = Alignment.objects.filter(witness_src_id=wit1)
-            #alignments = Alignment.objects.all()
+            alignments = Alignment.objects.filter(witness_src_id=witness_src)
 
-            #dmp = diff_match_patch()
-
-            #DMP = dmp_module.diff_match_patch()
-
-            cfile = request.FILES['csvfile']
+            """
+            #cfile = request.FILES['csvfile']
+            grabcsv = UserFile.objects.filter(id=grabid)[0]
+            cfile = grabcsv.csvfile
 
             file_data = ""
             for chunk in cfile.chunks():
@@ -400,91 +218,527 @@ def importer(request):
 
             io_string = io.StringIO(file_data)
             #next(io_string)
+            """
 
-            
             w1location = 0
             w2location = 0
 
-            srcreader = csv.reader(io_string, delimiter=',', quotechar='"')            
-            #for column in csv.reader(io_string, delimiter=',', quotechar='"'):
-            dblang1 = w1content
-            dblang2 = w2content
+            #srcreader = csv.reader(io_string, delimiter=',', quotechar='"')
+            #i, j = 50, 60
+            #i, j = 0, 10
+            #srcreader = csv.reader(itertools.islice(io_string, i, j+1), delimiter=',', quotechar='"')
+            #srcreader = grabcsv(grabid, csv_id, start, end)
+            #srcreader = grabcsv(grabid, csv_id, i, j)
+            srcreader = grabcsv(csv_id, i, j)
 
-            lang1lastcc = 0
-            lang2lastcc = 0
+            dbtib = w1content
+            dbtib = normalize_tib(dbtib)
 
+            dbzh = w2content
+            dbzh = normalize_zh(dbzh)
+
+            tiblastcc = 0
+            zhlastcc = 0
+
+            # elie's code
             for row in srcreader:
+                csvtib = normalize_tib(row[0])
+                csvzh = normalize_zh(row[1]).replace(" ", "") # quite important to replace the spaces only in the csv
+                if len(row) > 2:
+                    matchscore = row[2]
+                else:
+                    matchscore = 0
 
-                # start with the first witness
-                text = w1content
-                pattern = row[0].strip()
+                matchtib = match_row(dbtib, tiblastcc, csvtib)
+                matchzh = match_row(dbzh, zhlastcc, csvzh)
 
-                pattern = pattern.replace("_", " ")
+                if matchtib:
+                    tiblastcc = matchtib["end"]
+                    w1match = matchtib["start"]
+                    w1matchend = matchtib["end"]
 
-                matchlang1 = match_row(text, lang1lastcc, pattern)
-                if matchlang1:
-                    lang1lastcc = matchlang1["end"]
-                    w1match = matchlang1["start"]
-                    w1matchend = matchlang1["end"]
-
-                    w1matchlength = len(pattern)
-                    w1matchtarget = pattern
-
-                    w1matchfound = w1content[w1match:w1matchend]
+                    w1matchlength = len(csvtib)
+                    w1matchtarget = csvtib
+                    w1matchfound = dbtib[w1match:w1matchend]
                 else:
                     w1match = -1
-                
-                # now same thing on second witness
-                text = w2content
-                pattern = row[1].strip()
 
-                matchlang2 = match_row(text, lang2lastcc, pattern)
-                if matchlang2:
-                    lang2lastcc = matchlang2["end"]
-                    w2match = matchlang2["start"]
-                    w2matchend = matchlang2["end"]
+                if matchzh:
+                    zhlastcc = matchzh["end"]
+                    w2match = matchzh["start"]
+                    w2matchend = matchzh["end"]
 
-                    w2matchlength = len(pattern)
-                    w2matchtarget = pattern
-
-                    w2matchfound = w2content[w2match:w2matchend]
+                    w2matchlength = len(csvzh)
+                    w2matchtarget = csvzh
+                    w2matchfound = dbzh[w2match:w2matchend]
                 else:
                     w2match = -1
 
-                #if this exact alignment already exists in database
-                #change matchstatus from 0 to 1 and send with other data
-                #on html side, check for matchstatus to display/not display
-                #the add button
+                    #witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=this1match, char_end_src=this1end, char_start_dst=this2match, char_end_dst=this2end, score=0, type_id=2, tentative_name="csv_addition"
 
-                #search for this exact alignment:
-                #matchcheck = Alignment.objects.filter(char_start_src=bloop, char_end_src=bloop, char_start_dst=bloop, char_end_dst=bloop, witness_src_id=bloop, witness_dst_id=bloop).order_by('char_start')[0]
-                #matchcheck = Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('char_start')[0]
-                matchstatus = 0
-                if Alignment.objects.filter(witness_src_id=wit1, witness_dst_id=wit2).order_by('char_start').exists():
-                    matchstatus = 1
+                if matchtib and matchzh:
+                    matchstatus = 0
+                    if Alignment.objects.filter(witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=w1match, char_end_src=w1matchend, char_start_dst=w2match, char_end_dst=w2matchend).exists():
+                        matchstatus = 1
 
-                if matchlang1 and matchlang2:
-                    matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound))
+                    matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound, matchscore, matchstatus))
 
+                    # add this alignment to the list so we can grab it back
+                    csvalign = CsvAlignment(csvlist=csvlist, w1match=w1match, w1matchlength=w1matchlength, w1matchtarget=w1matchtarget, w1matchfound=w1matchfound, w2match=w2match, w2matchlength=w2matchlength, w2matchtarget=w2matchtarget, w2matchfound=w2matchfound)
+                    csvalign.save()
+            #"""
     else:
         form = UploadForm() # A empty, unbound form
+        csv_id = -1
+        witness_src = -1
+        witness_dst = -1
 
     # Load documents for the list page
-    documents = UserFile.objects.all()
+    #documents = UserFile.objects.all()
+
+    #witnesses = Witness.objects.all()
+    #alignments = Alignment.objects.all()
+
+    # Render list page with the documents and the form
+    context = {
+    'csv_id': csv_id,
+    'witness_src': witness_src,
+    'witness_dst': witness_dst,
+    #'witnesses': witnesses,
+    #'w1content': w1content,
+    #'w2content': w2content,
+    #'w1partitions': w1partitions,
+    #'w2partitions': w2partitions,
+    #'alignments': alignments,
+    'form': form,
+    'matches': matches,
+    'csv_startpoint': i,
+    'csv_endpoint': j,
+    }
+    return render(request, importer_template_location, context)
+
+@login_required
+def add_alignment(request):
+    # Handle file upload
+    w1content = ""
+    w2content = ""
+    alignments = []
+    matches = []
+
+    w1partitions = []
+    w2partitions = []
+
+    if request.method == 'POST':
+        #witness_list = Witness.objects.order_by('id')
+
+        post = request.POST.copy()
+        witness_src = post['witness_src']
+        witness_dst = post['witness_dst']
+        csv_id = post['csv_id']
+
+        witness1 = Witness.objects.filter(id=witness_src).order_by('id')[0]
+        witness2 = Witness.objects.filter(id=witness_dst).order_by('id')[0]
+
+        this1match = post['this1match']
+        this1matchlength = post['this1matchlength']
+        #this1matchtarget = post['this1matchtarget']
+        #this1matchfound = post['this1matchfound']
+        this2match = post['this2match']
+        this2matchlength = post['this2matchlength']
+        #this2matchtarget = post['this2matchtarget']
+        #this2matchfound = post['this2matchfound']
+
+        this1end = int(this1match) + int(this1matchlength)
+        this2end = int(this2match) + int(this2matchlength)
+
+        #i = int(post['csv_startpoint'])
+        #j = int(post['csv_endpoint'])
+
+        startpoint = int(post['csv_startpoint'])
+        endpoint = int(post['csv_endpoint'])
+
+        if startpoint < 0:
+            startpoint = 0
+        endpoint = startpoint + 10
+
+        #
+        w1partitions = WitnessPartition.objects.filter(witness_id=witness_src).order_by('char_start')
+        w2partitions = WitnessPartition.objects.filter(witness_id=witness_dst).order_by('char_start')
+
+        w1content = ""
+        for partition in w1partitions:
+            w1content = w1content + partition.content
+
+        w2content = ""
+        for partition in w2partitions:
+            w2content = w2content + partition.content
+
+        #alignments = Alignment.objects.filter(witness_src_id=witness_src)
+        #
+
+        alignment = Alignment.objects.create(witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=this1match, char_end_src=this1end, char_start_dst=this2match, char_end_dst=this2end, score=0, type_id=2, tentative_name="csv_addition")        
+        alignment.save()
+
+        # elie
+        #i, j = 0, 10
+        #srcreader = csv.reader(itertools.islice(io_string, i, j+1), delimiter=',', quotechar='"')
+        #srcreader = grabcsv(grabid, csv_id, start, end)
+        #srcreader = grabcsv(grabid, csv_id, i, j)
+        srcreader = grabcsv(csv_id, startpoint, endpoint)
+
+        dbtib = w1content
+        dbtib = normalize_tib(dbtib)
+
+        dbzh = w2content
+        dbzh = normalize_zh(dbzh)
+
+        tiblastcc = 0
+        zhlastcc = 0
+
+        # elie's code
+        for row in srcreader:
+            csvtib = normalize_tib(row[0])
+            csvzh = normalize_zh(row[1]).replace(" ", "") # quite important to replace the spaces only in the csv
+            if len(row) > 2:
+                matchscore = row[2]
+            else:
+                matchscore = 0
+
+            matchtib = match_row(dbtib, tiblastcc, csvtib)
+            matchzh = match_row(dbzh, zhlastcc, csvzh)
+
+            if matchtib:
+                tiblastcc = matchtib["end"]
+                w1match = matchtib["start"]
+                w1matchend = matchtib["end"]
+
+                w1matchlength = len(csvtib)
+                w1matchtarget = csvtib
+                w1matchfound = dbtib[w1match:w1matchend]
+            else:
+                w1match = -1
+
+            if matchzh:
+                zhlastcc = matchzh["end"]
+                w2match = matchzh["start"]
+                w2matchend = matchzh["end"]
+
+                w2matchlength = len(csvzh)
+                w2matchtarget = csvzh
+                w2matchfound = dbzh[w2match:w2matchend]
+            else:
+                w2match = -1
+
+                #witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=this1match, char_end_src=this1end, char_start_dst=this2match, char_end_dst=this2end, score=0, type_id=2, tentative_name="csv_addition"
+
+            if matchtib and matchzh:
+                matchstatus = 0
+                #matchscore = 0
+                if Alignment.objects.filter(witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=w1match, char_end_src=w1matchend, char_start_dst=w2match, char_end_dst=w2matchend).exists():
+                    matchstatus = 1
+
+                matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound, matchscore, matchstatus))
+
+                # add this alignment to the list so we can grab it back
+                #csvalign = CsvAlignment(csvlist=csvlist, w1match=w1match, w1matchlength=w1matchlength, w1matchtarget=w1matchtarget, w1matchfound=w1matchfound, w2match=w2match, w2matchlength=w2matchlength, w2matchtarget=w2matchtarget, w2matchfound=w2matchfound)
+                #csvalign.save()
+        # elie
+
+        """
+
+        csvalignments = CsvAlignment.objects.filter(csvlist=csv_id).order_by('id')
+
+        #
+
+        #
+
+        #form = UploadForm(request.POST, request.FILES)
+        #if form.is_valid():
+            #newcsv = UserFile(csvfile = request.FILES['csvfile'], witness_src = witness1, witness_dst = witness2)
+            #newcsv.save()
+
+        #csvlist = csv
+        #csv_id = csvlist.id
+        #csvlist = CsvAlignmentList(name="nothing")
+        #csvlist.save()
+        ## stopped here 9 apr 2020
+
+        for csvalignment in csvalignments:
+
+            w1match = csvalignment.w1match
+            w1matchlength = csvalignment.w1matchlength
+            w1matchtarget = csvalignment.w1matchtarget
+            w1matchfound = csvalignment.w1matchfound
+            w2match = csvalignment.w2match
+            w2matchlength = csvalignment.w2matchlength
+            w2matchtarget = csvalignment.w2matchtarget
+            w2matchfound = csvalignment.w2matchfound
+
+            w1end = int(w1match) + int(w1matchlength)
+            w2end = int(w2match) + int(w2matchlength)
+
+            matchstatus = 0
+            if Alignment.objects.filter(witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=w1match, char_end_src=w1end, char_start_dst=w2match, char_end_dst=w2end).exists():
+                    matchstatus = 1
+  
+            matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound,matchstatus))
+
+        w1partitions = WitnessPartition.objects.filter(witness_id=witness_src).order_by('char_start')
+        w2partitions = WitnessPartition.objects.filter(witness_id=witness_dst).order_by('char_start')
+
+        w1content = ""
+        for partition in w1partitions:
+            w1content = w1content + partition.content
+
+        w2content = ""
+        for partition in w2partitions:
+            w2content = w2content + partition.content
+
+        alignments = Alignment.objects.filter(witness_src_id=witness_src)
+
+        """
+
+    # Load documents for the list page
+    #documents = UserFile.objects.all()
     witnesses = Witness.objects.all()
     #alignments = Alignment.objects.all()
 
     # Render list page with the documents and the form
     context = {
-    'documents': documents,
+    'csv_id': csv_id,
+    'witness_src': witness_src,
+    'witness_dst': witness_dst,
     'witnesses': witnesses,
     'w1content': w1content,
     'w2content': w2content,
     'w1partitions': w1partitions,
     'w2partitions': w2partitions,
     'alignments': alignments,
-    'form': form,
+    #'form': form,
     'matches': matches,
+    'csv_startpoint': startpoint,
+    'csv_endpoint': endpoint,
+    }
+    return render(request, importer_template_location, context)
+
+@login_required
+def navalign(request):
+    # Handle file upload
+    w1content = ""
+    w2content = ""
+    alignments = []
+    matches = []
+
+    w1partitions = []
+    w2partitions = []
+
+    if request.method == 'POST':
+        #witness_list = Witness.objects.order_by('id')
+
+        post = request.POST.copy()
+        witness_src = post['witness_src']
+        witness_dst = post['witness_dst']
+        csv_id = post['csv_id']
+
+        witness1 = Witness.objects.filter(id=witness_src).order_by('id')[0]
+        witness2 = Witness.objects.filter(id=witness_dst).order_by('id')[0]
+
+        this1match = post['this1match']
+        this1matchlength = post['this1matchlength']
+        #this1matchtarget = post['this1matchtarget']
+        #this1matchfound = post['this1matchfound']
+        this2match = post['this2match']
+        this2matchlength = post['this2matchlength']
+
+        #startpoint = int(post['csv_startpoint'])
+        #endpoint = int(post['csv_endpoint'])
+
+        #if startpoint < 0:
+        #    startpoint = 0
+        #endpoint = startpoint + 10
+
+        startpoint = int(post['csv_startpoint'])
+        endpoint = int(post['csv_endpoint'])
+
+        if startpoint < 0:
+            startpoint = 0
+        endpoint = startpoint + 10
+
+        #this2matchtarget = post['this2matchtarget']
+        #this2matchfound = post['this2matchfound']
+
+        #this1end = int(this1match) + int(this1matchlength)
+        #this2end = int(this2match) + int(this2matchlength)
+
+        #alignment = Alignment.objects.create(witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=this1match, char_end_src=this1end, char_start_dst=this2match, char_end_dst=this2end, score=0, type_id=2, tentative_name="csv_addition")        
+        #alignment.save()
+
+                # elie
+
+        w1partitions = WitnessPartition.objects.filter(witness_id=witness_src).order_by('char_start')
+        w2partitions = WitnessPartition.objects.filter(witness_id=witness_dst).order_by('char_start')
+
+        w1content = ""
+        for partition in w1partitions:
+            w1content = w1content + partition.content
+
+        w2content = ""
+        for partition in w2partitions:
+            w2content = w2content + partition.content
+
+        alignments = Alignment.objects.filter(witness_src_id=witness_src)
+
+        """
+        #cfile = request.FILES['csvfile']
+        grabcsv = UserFile.objects.filter(id=grabid)[0]
+        cfile = grabcsv.csvfile
+
+        file_data = ""
+        for chunk in cfile.chunks():
+            file_data = file_data + str(chunk.decode("utf-8"))
+
+        io_string = io.StringIO(file_data)
+        #next(io_string)
+        """
+
+        w1location = 0
+        w2location = 0
+
+
+        #i, j = 10, 20
+        #srcreader = csv.reader(itertools.islice(io_string, i, j+1), delimiter=',', quotechar='"')
+        #srcreader = grabcsv(grabid, csv_id, start, end)
+        #srcreader = grabcsv(grabid, csv_id, i, j)
+        #srcreader = grabcsv(csv_id, i, j)
+        #srcreader = grabcsv(220,0,0)
+        srcreader = grabcsv(csv_id,startpoint,endpoint)
+
+        dbtib = w1content
+        dbtib = normalize_tib(dbtib)
+
+        dbzh = w2content
+        dbzh = normalize_zh(dbzh)
+
+        tiblastcc = 0
+        zhlastcc = 0
+
+        # elie's code
+        for row in srcreader:
+            csvtib = normalize_tib(row[0])
+            csvzh = normalize_zh(row[1]).replace(" ", "") # quite important to replace the spaces only in the csv
+            if len(row) > 2:
+                matchscore = row[2]
+            else:
+                matchscore = 0
+
+            matchtib = match_row(dbtib, tiblastcc, csvtib)
+            matchzh = match_row(dbzh, zhlastcc, csvzh)
+
+            if matchtib:
+                tiblastcc = matchtib["end"]
+                w1match = matchtib["start"]
+                w1matchend = matchtib["end"]
+
+                w1matchlength = len(csvtib)
+                w1matchtarget = csvtib
+                w1matchfound = dbtib[w1match:w1matchend]
+            else:
+                w1match = -1
+
+            if matchzh:
+                zhlastcc = matchzh["end"]
+                w2match = matchzh["start"]
+                w2matchend = matchzh["end"]
+
+                w2matchlength = len(csvzh)
+                w2matchtarget = csvzh
+                w2matchfound = dbzh[w2match:w2matchend]
+            else:
+                w2match = -1
+
+                #witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=this1match, char_end_src=this1end, char_start_dst=this2match, char_end_dst=this2end, score=0, type_id=2, tentative_name="csv_addition"
+
+            if matchtib and matchzh:
+                matchstatus = 0
+                #matchscore = 0
+                if Alignment.objects.filter(witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=w1match, char_end_src=w1matchend, char_start_dst=w2match, char_end_dst=w2matchend).exists():
+                    matchstatus = 1
+
+                matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound, matchscore, matchstatus))
+
+                # add this alignment to the list so we can grab it back
+                #csvalign = CsvAlignment(csvlist=csvlist, w1match=w1match, w1matchlength=w1matchlength, w1matchtarget=w1matchtarget, w1matchfound=w1matchfound, w2match=w2match, w2matchlength=w2matchlength, w2matchtarget=w2matchtarget, w2matchfound=w2matchfound)
+                #csvalign.save()
+        # elie
+
+        """
+        csvalignments = CsvAlignment.objects.filter(csvlist=csv_id).order_by('id')
+
+        #form = UploadForm(request.POST, request.FILES)
+        #if form.is_valid():
+            #newcsv = UserFile(csvfile = request.FILES['csvfile'], witness_src = witness1, witness_dst = witness2)
+            #newcsv.save()
+
+        #csvlist = csv
+        #csv_id = csvlist.id
+        #csvlist = CsvAlignmentList(name="nothing")
+        #csvlist.save()
+        ## stopped here 9 apr 2020
+
+        for csvalignment in csvalignments:
+
+            w1match = csvalignment.w1match
+            w1matchlength = csvalignment.w1matchlength
+            w1matchtarget = csvalignment.w1matchtarget
+            w1matchfound = csvalignment.w1matchfound
+            w2match = csvalignment.w2match
+            w2matchlength = csvalignment.w2matchlength
+            w2matchtarget = csvalignment.w2matchtarget
+            w2matchfound = csvalignment.w2matchfound
+
+            w1end = int(w1match) + int(w1matchlength)
+            w2end = int(w2match) + int(w2matchlength)
+
+            matchstatus = 0
+            if Alignment.objects.filter(witness_src_id=witness_src, witness_dst_id=witness_dst, char_start_src=w1match, char_end_src=w1end, char_start_dst=w2match, char_end_dst=w2end).exists():
+                    matchstatus = 1
+  
+            matches.append((w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound,matchstatus))
+
+        w1partitions = WitnessPartition.objects.filter(witness_id=witness_src).order_by('char_start')
+        w2partitions = WitnessPartition.objects.filter(witness_id=witness_dst).order_by('char_start')
+
+        w1content = ""
+        for partition in w1partitions:
+            w1content = w1content + partition.content
+
+        w2content = ""
+        for partition in w2partitions:
+            w2content = w2content + partition.content
+
+        alignments = Alignment.objects.filter(witness_src_id=witness_src)
+        """
+
+    # Load documents for the list page
+    #documents = UserFile.objects.all()
+    witnesses = Witness.objects.all()
+    #alignments = Alignment.objects.all()
+
+    # Render list page with the documents and the form
+    context = {
+    'csv_id': csv_id,
+    'witness_src': witness_src,
+    'witness_dst': witness_dst,
+    'witnesses': witnesses,
+    'w1content': w1content,
+    'w2content': w2content,
+    'w1partitions': w1partitions,
+    'w2partitions': w2partitions,
+    'alignments': alignments,
+    #'form': form,
+    'matches': matches,
+    'csv_startpoint': startpoint,
+    'csv_endpoint': endpoint,
     }
     return render(request, importer_template_location, context)
 
@@ -2165,9 +2419,6 @@ def update_alignment(request):
     latest_alignments_list = Alignment.objects.filter(witness_src_id=witness1_id).filter(witness_dst_id=witness2_id).order_by('char_start_src')
 
 
-    """
-    """
-
     partition_array =[]
 
     go_a1 = latest_partition_list1[0]
@@ -2250,211 +2501,6 @@ def update_alignment(request):
     'usersettings': usersettings,
      }
     return HttpResponse(template.render(context, request))
-
-@login_required
-def add_alignment(request):
-   
-    error_msg = "error";
-    template = loader.get_template(importer_template_location)
-
-    #usersettings = UserSettings.objects.order_by('username_id')[0]
-    current_user = request.user
-    usersettings = UserSettings.objects.filter(username_id=current_user.id).order_by('username_id')[0]
-
-
-    scrollvalue1 = "0"
-    scrollvalue2 = "0"
-    scrollvalue_alignments = "0"
-
-    latest_witness_list = Witness.objects.order_by('id')
-
-    witness1 = latest_witness_list[0]
-    witness2 = latest_witness_list[0]
-
-    witness1_id = witness1.id
-    witness2_id = witness2.id
-
-    latest_alignments_list = Alignment.objects.order_by('char_start_src')
-    #latest_alignments_list = Alignment.objects.filter(witness_src_id=witness1_id).filter(witness_dst_id=witness2_id).order_by('char_start_src')
-
-    from1 = 0
-    to1 = 0
-    from2 = 0
-    to2 = 0
-
-    lastselection1_start = 0
-    lastselection1_end = 0
-    lastselection2_start = 0
-    lastselection2_end = 0
-   
-    post = request.POST.copy()
-    #alignment_id = int(post['alignment_id'])
-    #revisedscore = int(post['revisedscore'])
-
-    #
-    reallypost = 0
-    #clickstatus = post['clickstatus']
-
-    scrollvalue1 = post['scrollvalue1']
-    scrollvalue2 = post['scrollvalue2']
-    scrollvalue_alignments = post['scrollvalue_alignments']
-
-    try:
-        witness1_id = int(post['witness1_id'])
-    except ValueError:
-        witness1_id = latest_witness_list[0].id
-
-    try:
-        witness2_id = int(post['witness2_id'])
-    except ValueError:
-        witness2_id = latest_witness_list[0].id
-
-    witness1 = latest_witness_list.get(id=witness1_id)
-    witness2 = latest_witness_list.get(id=witness2_id)
-
-    latest_partition_list1 = WitnessPartition.objects.filter(witness_id=witness1_id).order_by('char_start')
-    latest_partition_list2 = WitnessPartition.objects.filter(witness_id=witness2_id).order_by('char_start')
-
-    mrp1 = latest_partition_list1[0]
-    mrp2 = latest_partition_list2[0]
-
-
-    latest_annotations_list1 = Annotation.objects.filter(witness_id=witness1_id).order_by('char_start')
-    latest_annotations_list2 = Annotation.objects.filter(witness_id=witness2_id).order_by('char_start')
-
-
-    try:
-        partition1_id = int(post['partition1_id'])
-    except ValueError:
-        partition1_id = mrp1.id
-    try:
-        partition2_id = int(post['partition2_id'])
-    except ValueError:
-        partition2_id = mrp2.id
-
-    mrp1_id = partition1_id
-    mrp2_id = partition2_id
-    #
-    
-    #instance = latest_alignments_list.get(id=alignment_id)
-    
-    #instead of deleting we should be adding here,
-    #create new Alignment object
-    #alignment = Alignment.objects.create(witness_src_id=w_src_id, witness_dst_id=w_dst_id, char_start_src=cs_src, char_end_src=ce_src, char_start_dst=cs_dst, char_end_dst=ce_dst, score=sc, type_id=t_id)
-    #and update log with correct user
-    # ...
-    #alignment_log = AlignmentLog.objects.create(alignment_id=alignment.id, witness_src_id=w_src_id, witness_dst_id=w_dst_id, char_start_src=cs_src, char_end_src=ce_src, char_start_dst=cs_dst, char_end_dst=ce_dst, score=sc, type_id=t_id, user_id=5)
-
-    #instance.delete()
-    
-    #one_entry = latest_alignments_list.get(id=alignment_id)
-    #one_entry.score = revisedscore
-    #one_entry.save()
-
-    # new_log_entry =
-    ### ADD NEW LOG ENTRY TO RECORD CHANGE
-    #alignment = Alignment.objects.create(witness_src_id=w_src_id, witness_dst_id=w_dst_id, char_start_src=cs_src, char_end_src=ce_src, char_start_dst=cs_dst, char_end_dst=ce_dst, score=sc, type_id=t_id)
-    
-    #alignment_log = AlignmentLog.objects.create(alignment_id=alignment.id, witness_src_id=w_src_id, witness_dst_id=w_dst_id, char_start_src=cs_src, char_end_src=ce_src, char_start_dst=cs_dst, char_end_dst=ce_dst, score=sc, type_id=t_id, user_id=5)
-
-    #latest_alignments_list = Alignment.objects.order_by('char_start_src')
-    latest_alignments_list = Alignment.objects.filter(witness_src_id=witness1_id).filter(witness_dst_id=witness2_id).order_by('char_start_src')
-
-
-    """
-    """
-
-    partition_array =[]
-
-    go_a1 = latest_partition_list1[0]
-
-    if len(latest_partition_list1) > 2:
-        go_b1 = latest_partition_list1[1]
-        go_c1 = latest_partition_list1[2]
-        new_p1 = go_a1.content + go_b1.content + go_c1.content
-        last_char1 = go_c1.char_end
-
-    elif len(latest_partition_list1) > 1:
-        go_b1 = latest_partition_list1[1]
-        new_p1 = go_a1.content + go_b1.content
-        last_char1 = go_b1.char_end
-
-    else:
-        new_p1 = go_a1.content
-        last_char1 = go_a1.char_end
-
-    go_a2 = latest_partition_list2[0]
-
-    if len(latest_partition_list2) > 2:
-        go_b2 = latest_partition_list2[1]
-        go_c2 = latest_partition_list2[2]
-        new_p2 = go_a2.content + go_b2.content + go_c2.content
-        last_char2 = go_c2.char_end
-
-    elif len(latest_partition_list2) > 1:
-        go_b2 = latest_partition_list2[1]
-        new_p2 = go_a2.content + go_b2.content
-        last_char2 = go_b2.char_end
-
-    else:
-        new_p2 = go_a2.content
-        last_char2 = go_a2.char_end
-
-    partition_array.append(new_p1)
-    partition_array.append(new_p2)
-
-    json_partition = json.dumps(partition_array)
-
-    first_char1 = go_a1.char_start
-    first_char2 = go_a2.char_start
-
-
-    #one_entry.save(update_fields=['score'])
-    #alignment = Alignment.objects.update(score=sc)
-
-    #alignment.update(blog=b)
-
-    #alignment = Alignment.objects.update(blog=b)
-
-    #(witness_src_id=w_src_id, witness_dst_id=w_dst_id, char_start_src=cs_src, char_end_src=ce_src, char_start_dst=cs_dst, char_end_dst=ce_dst, score=revisedscore, type_id=t_id)
-
-    #alignment_log = AlignmentLog.objects.create(alignment_id=alignment.id, witness_src_id=w_src_id, witness_dst_id=w_dst_id, char_start_src=cs_src, char_end_src=ce_src, char_start_dst=cs_dst, char_end_dst=ce_dst, score=sc, type_id=t_id, user_id=5)
-
-    context = {
-    'latest_witness_list': latest_witness_list,
-    'latest_alignments_list': latest_alignments_list,
-    'latest_partition_list1': latest_partition_list1,
-    'latest_partition_list2': latest_partition_list2,
-    'latest_annotations_list1': latest_annotations_list1,
-    'latest_annotations_list2': latest_annotations_list2,
-    'most_recent_witness1': witness1,
-    'most_recent_witness2': witness2,
-    'most_recent_partition1': mrp1_id,
-    'most_recent_partition2': mrp2_id,
-    'partition_array': json_partition,
-    'first_char1': first_char1,
-    'last_char1': last_char1,
-    'first_char2': first_char2,
-    'last_char2': last_char2,
-    'lastselection1_start': lastselection1_start,
-    'lastselection1_end': lastselection1_end,
-    'lastselection2_start': lastselection2_start,
-    'lastselection2_end': lastselection2_end,
-    'scrollvalue1': scrollvalue1,
-    'scrollvalue2': scrollvalue2,
-    'scrollvalue_alignments': scrollvalue_alignments,
-    'usersettings': usersettings,
-    'documents': documents,
-    'witnesses': witnesses,
-    'w1content': w1content,
-    'w2content': w2content,
-    'w1partitions': w1partitions,
-    'w2partitions': w2partitions,
-    'alignments': alignments,
-    'form': form,
-    'matches': matches,
-    }
-    return render(request, importer_template_location, context)
 
 @login_required
 def delete_alignment(request):
@@ -2556,9 +2602,6 @@ def delete_alignment(request):
     #latest_alignments_list = Alignment.objects.order_by('char_start_src')
     latest_alignments_list = Alignment.objects.filter(witness_src_id=witness1_id).filter(witness_dst_id=witness2_id).order_by('char_start_src')
 
-
-    """
-    """
 
     partition_array =[]
 
