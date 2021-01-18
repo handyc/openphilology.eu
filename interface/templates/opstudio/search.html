@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+
+<form action="{% url 'search' %}" method="POST" content='text/html; charset=UTF-8' accept-charset="UTF-8">{% csrf_token %}
+  {{ form.as_table }}
+  <input type="text" id="term1" name="term1" size="40" value="">
+  <p><button type="submit">Dictionary Search</button>
+</form>
+        <!-- Button Menu  -->
+        <p>
+        <form style="display:inline" id="alignments_form" action="{% url 'alignments' %}">
+<input type="submit" value="ALIGNMENTS" /></form>
+        <form style="display:inline" id="ngram_form" action="{% url 'ngrams' %}">
+<input type="submit" value="NGRAMS" /></form>
+
+<input type="submit" value="DICT" /></form>
+
+<form style="display:inline" id="settings_form" action="{% url 'settings' %}">
+<input type="submit" value="SETTINGS" /></form>
+        
+
+
+
+
+
+
+
+        <!-- Button Menu  -->
+
+
+{% if matches %}
+{% for match in matches %}
+<p>match: {{ match.entry1 }} is defined as {{ match.entry2 }} in {{ match.dictionary }}
+{% endfor %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block content %}
+
+        <!-- Upload form. Note enctype attribute! -->
+        <form action="{% url 'importer' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <p>{{ form.non_field_errors }}</p>
+
+            <p>{{ form.witness_src.label_tag }} {{ form.witness_src.help_text }} {{ form.witness_src }} {{ form.witness_dst.label_tag }} {{ form.witness_dst.help_text }} {{ form.witness_dst }}</p>
+
+            <p>{{ form.csvfile.label_tag }} {{ form.csvfile }}
+                {{ form.csvfile.errors }}
+
+            <script>witness_src = {{ form.witness_src }};
+            witness_dst = {{ form.witness_dst }};
+            </script>
+
+            <input type="submit" value="Upload"/></p>
+        </form>
+        <form action="/alignments"><input type="submit" value="Main" /></form>
+
+        {% if matches %}
+        <table style="table-layout:fixed; width:100%">
+            <tr>
+                <th style="border: 1px solid black; font-size:75%; width: 4%;">w1 match pos</th>
+                <th style="border: 1px solid black; font-size:75%; width: 20%;">w1 target</th>
+                <th style="border: 1px solid black; font-size:75%; width: 20%;">w1 found</th>
+                <th style="border: 1px solid black; font-size:75%; text-align:center; width: 6%;"></th>
+                <th style="border: 1px solid black; font-size:75%; width: 4%;">w2 match pos</th>
+                <th style="border: 1px solid black; font-size:75%; width: 10%;">w2 target</th>
+                <th style="border: 1px solid black; font-size:75%; width: 10%;">w2 found</th>
+                <th style="border: 1px solid black; font-size:75%; width: 8%;">score</th>
+            </tr>
+
+            {% for w1match, w1matchlength, w1matchtarget, w1matchfound, w2match, w2matchlength, w2matchtarget, w2matchfound, matchscore, matchstatus in matches %}
+
+            <!-- kludge to limit display of matches to 10 -->
+            <!-- kludge to limit display of matches to 10 {% if forloop.counter < 11 %} -->
+            <tr>
+                <td style="border: 1px solid black; width: 4%;">{{ w1match }}</td>
+                <td style="border: 1px solid black; width: 20%;">{{ w1matchtarget }}</td>
+                <td style="border: 1px solid black; width: 20%;">{{ w1matchfound }}</td>
+                <td style="border: 1px solid black; text-align:center; width: 6%;">
+
+                <form id="addme" style="display:inline;" method="post" action="{% url 'add_alignment' %}">{%csrf_token %}
+
+                <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
+
+                <input hidden id="witness_src" name="witness_src" type="text" value="{{ witness_src }}">
+                <input hidden id="witness_dst" name="witness_dst" type="text" value="{{ witness_dst }}">
+
+
+                <input hidden id="this1match" name="this1match" type="text" value="{{ w1match }}">
+                <input hidden id="this1matchlength" name="this1matchlength" type="text" value="{{ w1matchlength }}">
+
+                <input hidden id="this2match" name="this2match" type="text" value="{{ w2match }}">
+                <input hidden id="this2matchlength" name="this2matchlength" type="text" value="{{ w2matchlength }}">
+
+                <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
+                <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
+
+                <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
+                <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
+                <input hidden id="scrollvalue_alignments" name="scrollvalue_alignments" value="{{ scrollvalue_alignments }}" size="4">
+
+                <input hidden id="csv_id" name="csv_id" value="{{ csv_id }}" size="4">
+
+                <input hidden id="csv_startpoint" name="csv_startpoint" value="{{ csv_startpoint }}">
+                <input hidden id="csv_endpoint" name="csv_endpoint" value="{{ csv_endpoint }}">
+
+                <input hidden id="score" name="score" value="{{ matchscore }}">
+
+
+                {% if matchstatus == 1 %}
+                <button disabled style="color:white; background:blue;" type="submit">add</button>
+                {% else %}
+                <button style="color:black; background:lightgray;" type="submit">add</button>
+                {% endif %}
+
+                </form></td>
+
+                <td style="border: 1px solid black; width: 4%;">{{ w2match }}</td>
+                <td style="border: 1px solid black; width: 10%;">{{ w2matchtarget }}</td>
+                <td style="border: 1px solid black; width: 10%;">{{ w2matchfound }}</td>
+                <td style="border: 1px solid black; width: 4%;">{{ matchscore }}</td>
+            </tr>
+
+            <!-- kludge to limit display of matches to 10 {% endif %} -->
+            
+
+            {% endfor %}
+        </table>
+
+        <form id="navalign" style="display:inline;" method="post" action="{% url 'navalign' %}">{% csrf_token %}
+
+                <input hidden id="alignment_id" name="alignment_id" type="text" value="{{ a.id }}">
+
+                <input hidden id="witness_src" name="witness_src" type="text" value="{{ witness_src }}">
+                <input hidden id="witness_dst" name="witness_dst" type="text" value="{{ witness_dst }}">
+
+
+                <input hidden id="this1match" name="this1match" type="text" value="{{ w1match }}">
+                <input hidden id="this1matchlength" name="this1matchlength" type="text" value="{{ w1matchlength }}">
+
+                <input hidden id="this2match" name="this2match" type="text" value="{{ w2match }}">
+                <input hidden id="this2matchlength" name="this2matchlength" type="text" value="{{ w2matchlength }}">
+
+                <input hidden id="partition1_id" name="partition1_id" value="{{ most_recent_partition1 }}">
+                <input hidden id="partition2_id" name="partition2_id" value="{{ most_recent_partition2 }}">
+
+                <input hidden id="scrollvalue1" name="scrollvalue1" value="{{ scrollvalue1 }}" size="4">
+                <input hidden id="scrollvalue2" name="scrollvalue2" value="{{ scrollvalue2 }}" size="4">
+                <input hidden id="scrollvalue_alignments" name="scrollvalue_alignments" value="{{ scrollvalue_alignments }}" size="4">
+
+                <input hidden id="csv_id" name="csv_id" value="{{ csv_id }}" size="4">
+
+                <input hidden id="csv_startpoint" name="csv_startpoint" value="{{ csv_startpoint }}">
+                <input hidden id="csv_endpoint" name="csv_endpoint" value="{{ csv_endpoint }}">
+
+
+        <button id="navprev" type="button" style="float: left;" onclick="csv_startpoint.value = parseInt(csv_startpoint.value)-10; document.getElementById('navalign').submit();">←prev</button>
+        <button id="navnext" type="button" style="float: right;" onclick="csv_startpoint.value = parseInt(csv_startpoint.value)+10; document.getElementById('navalign').submit();">next→</button>
+        </form>
+
+        <script>
+//csv_startpoint.value = "0";
+//csv_endpoint.value = "0";
+
+function pointprev() {
+    //csv_startpoint.value = csv_startpoint.value - 10;
+    //csv_endpoint.value = csv_endpoint.value - 10;
+    csv_startpoint.value = 0;
+    csv_endpoint.value = 0;
+    document.getElementById("navalign").submit();
+};
+
+function pointnext() {
+    //csv_startpoint.value = {{ csv_startpoint }} + 10;
+    //csv_endpoint.value = {{ csv_endpoint }} + 10;
+    csv_startpoint.value = 100;
+    csv_endpoint.value = 100;
+    document.getElementById("navalign").submit();
+};
+
+</script>
+
+        {% else %}
+            <p>Matches will display after file is uploaded.</p>
+            <p>csv format: lang1, lang2, score, label, note.</p>
+            <p>example: @##/_/rgya gar skad du/_A r+ya ma hA rat+na kU Ta d+ha rma par+yA ya sha ta sA ha sri ka gran the tri sam+ba ra ni ra de sha pa ri brta nan nAm ma hA ya na sU tra/, 大唐三藏法師菩提流志奉　詔譯如是我聞：一時, 3, 11.c, just a test</p>
+        {% endif %}
+        
+
+        <!-- kludge comment -->
+
+
+{% endblock %}
