@@ -41,3 +41,14 @@
 # 5. Dirty Data
 #
 
+#
+# 6. Framework
+#
+##### Ubuntu
+##### Supervisor
+##### PostgreSQL
+##### Nginx
+##### Gunicorn
+##### Python 3
+##### Django
+##### JavaScript
