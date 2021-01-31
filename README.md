@@ -1,13 +1,13 @@
 # ERC Open Philology
 
-## https://openphilology.eu
-## Complete files of the ERC Open Philology project at Leiden University
+### https://openphilology.eu
+### Complete files of the ERC Open Philology project at Leiden University
 
 ***
 
-## now in beta:
-## Tibetan-Chinese text alignment viewing and editing utility with web interface
-## https://beta.openphilology.eu
+### now in beta:
+### Tibetan-Chinese text alignment viewing and editing utility with web interface
+### https://beta.openphilology.eu
 
 ***
 
