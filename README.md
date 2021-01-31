@@ -5,9 +5,9 @@
 
 ***
 
-# in progress:
-# Tibetan-Chinese text alignment utility with web interface
-#
+# now in beta:
+# Tibetan-Chinese text alignment viewing and editing utility with web interface
+# https://beta.openphilology.eu
 
 ***
 
