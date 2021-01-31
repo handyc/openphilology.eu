@@ -1,10 +1,17 @@
-# openphilology.eu
+# ERC Open Philology
+
+***
+
+# https://openphilology.eu
 # Complete files of the ERC Open Philology project at Leiden University
 
+***
 
 # in progress:
 # Tibetan-Chinese text alignment utility with web interface
 #
+
+***
 
 #
 # 1. Introduction
