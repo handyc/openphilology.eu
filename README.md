@@ -28,6 +28,14 @@
 #
 # 4. Data Ingestion
 #
+##### XML TEI
+##### UTF-8
+##### DB
+##### indexing
+##### retrieval
+##### fuzzy search
+##### automated alignment
+##### scoring
 
 #
 # 5. Dirty Data
