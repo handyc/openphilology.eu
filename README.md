@@ -9,7 +9,12 @@
 ### Tibetan-Chinese text alignment viewing and editing utility with web interface
 ### https://beta.openphilology.eu
 
+### please note that many auto-alignments are not yet accurate as we are working to refine
+### the alignment algorithms
+
 ***
+
+### documentation in progress
 
 #
 # 1. Introduction
