@@ -29,7 +29,6 @@
 # 3. Examples
 #
 ##### Mahāratnakuṭa Collection
-![g](https://openphilology.eu/media/pages/news/1898924401-1555331596/newsaas2019.03.23o.png)
 #
 # 4. Data Ingestion
 #
@@ -52,6 +51,8 @@
 #
 # 6. Framework
 #
+![g](https://openphilology.eu/media/pages/news/1898924401-1555331596/newsaas2019.03.23o.png)
+
 ##### Ubuntu
 ##### Supervisor
 ##### PostgreSQL
