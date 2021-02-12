@@ -29,7 +29,7 @@
 # 3. Examples
 #
 ##### Mahāratnakuṭa Collection
-
+![g](https://openphilology.eu/media/pages/news/1898924401-1555331596/newsaas2019.03.23o.png)
 #
 # 4. Data Ingestion
 #
@@ -45,6 +45,7 @@
 #
 # 5. Dirty Data
 #
+![f](https://openphilology.eu/media/pages/news/2225901429-1553523766/newsdadh2018.png)
 
 #
 # 6. Framework
