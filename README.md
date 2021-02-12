@@ -60,5 +60,5 @@
 
 ![Visitor Count](https://profile-counter.glitch.me/handyc/count.svg)
 
-![300](https://profile-counter.glitch.me/handyc/count.svg)
+![i](https://openphilology.eu/media/pages/news/524279882-1558970201/newsdatech2019.05.png)
  322
