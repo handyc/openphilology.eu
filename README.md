@@ -57,4 +57,7 @@
 ##### Python 3
 ##### Django
 ##### JavaScript
+
+![Visitor Count](https://profile-counter.glitch.me/handyc/count.svg)
+
  322
