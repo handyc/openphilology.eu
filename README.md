@@ -62,4 +62,4 @@
 ##### Django
 ##### JavaScript
 
-320 days until Open Philology Phase III
+319 days until Open Philology Phase III
