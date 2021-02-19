@@ -63,12 +63,4 @@
 ##### JavaScript
 
 ````
-    February 2021     
-Su     7 14 21 28   
-Mo  1  8 15 22      
-Tu  2  9 16 23      
-We  3 10 17 24      
-Th  4 11 18 25      
-Fr  5 12 19 26      
-Sa  6 13 20 27      
 315 days until Open Philology Phase III
