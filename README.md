@@ -35,13 +35,24 @@
 ![i](https://openphilology.eu/media/pages/news/524279882-1558970201/newsdatech2019.05.png)
 
 ##### XML TEI
+#####
 ##### UTF-8
+#####
 ##### DB
+#####
 ##### indexing
+#####
 ##### retrieval
+#####
 ##### fuzzy search
+#####
 ##### automated alignment
+#####
 ##### scoring
+###### punctuation check
+###### dictionary check
+###### n-gram check
+###### POS check
 
 #
 # 5. Dirty Data
