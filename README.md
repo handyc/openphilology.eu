@@ -28,6 +28,10 @@
 #
 # 3. Examples
 #
+###### rgya gar skad du/_Ar+ya gang+go t+ta ra pa ri pr-i ts+tshA nA ma ma hA yA na sU tra/
+
+###### 恒河上優婆夷會第三十一
+
 ##### Mahāratnakuṭa Collection
 #
 # 4. Data Ingestion
