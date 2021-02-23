@@ -28,59 +28,20 @@
 #
 # 3. Examples
 #
-
 ##### Mahāratnakuṭa Collection
-
-###### rgya gar skad du/_Ar+ya gang+go t+ta ra pa ri pr-i ts+tshA nA ma ma hA yA na sU tra/
-
-###### 恒河上優婆夷會第三十一
-
-###### ...
-
-###### gang gA'i mchog gis gsol pa/
-
-###### 彼優婆夷即白佛言：
-
-###### ...
-
-###### bka' stsal pa/_gang gA'i mchog de bzhin no/
-
-###### 佛言：「如是如是，如汝所 說。」
-
-###### ...
-
-###### ...
-
-###### ...
-
-###### ...
-
-###### ...
-
 #
 # 4. Data Ingestion
 #
 ![i](https://openphilology.eu/media/pages/news/524279882-1558970201/newsdatech2019.05.png)
 
 ##### XML TEI
-#####
 ##### UTF-8
-#####
 ##### DB
-#####
 ##### indexing
-#####
 ##### retrieval
-#####
 ##### fuzzy search
-#####
 ##### automated alignment
-#####
 ##### scoring
-###### punctuation check
-###### dictionary check
-###### n-gram check
-###### POS check
 
 #
 # 5. Dirty Data
@@ -137,4 +98,4 @@ Su Mo Tu We Th Fr Sa  Su Mo Tu We Th Fr Sa
 21 22 23 24 25 26 27  19 20 21 22 23 24 25  
 28 29 30              26 27 28 29 30 31     
                                             
-312 days until Open Philology Phase III
+311 days until Open Philology Phase III
