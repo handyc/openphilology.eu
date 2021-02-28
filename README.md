@@ -36,6 +36,11 @@
 # 3. Examples
 #
 ##### Mahāratnakuṭa Collection
+##### Sanskrit
+##### Chinese
+##### Tibetan
+##### English
+
 #
 # 4. Data Ingestion
 #
