@@ -25,6 +25,13 @@
 #
 ##### text alignment
 
+##### defining text alignment
+
+##### similarities between texts based on
+##### position
+##### string similarity
+##### meaning similarity
+
 #
 # 3. Examples
 #
