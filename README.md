@@ -119,4 +119,4 @@ Su Mo Tu We Th Fr Sa
 19 20 21 22 23 24 25  
 26 27 28 29 30 31     
                       
-296 days until Open Philology Phase III
+295 days until Open Philology Phase III
